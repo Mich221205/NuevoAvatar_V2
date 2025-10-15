@@ -1,0 +1,6 @@
+@PV_NA_UsuarioRoles_HostAddress = http://localhost:5189
+
+GET {{PV_NA_UsuarioRoles_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

@@ -1,0 +1,12 @@
+# Asegurar saltos de línea consistentes
+* text=auto
+
+# Forzar UTF-8
+*.cs text diff=csharp eol=lf
+
+# Configurar comportamiento de fusión
+*.cs merge=union
+
+# Evitar conflictos en archivos de configuración
+*.json text
+*.xml text

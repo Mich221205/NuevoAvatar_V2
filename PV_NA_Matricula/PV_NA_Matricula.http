@@ -1,0 +1,6 @@
+@PV_NA_Matricula_HostAddress = http://localhost:5193
+
+GET {{PV_NA_Matricula_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

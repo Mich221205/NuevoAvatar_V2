@@ -1,0 +1,6 @@
+@PV_NA_OfertaAcademica_HostAddress = http://localhost:5048
+
+GET {{PV_NA_OfertaAcademica_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
