@@ -1,42 +1,60 @@
+using Microsoft.OpenApi.Models;
+using PV_NA_Matricula;
+using PV_NA_Matricula.Repository;
+using PV_NA_Matricula.Services;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+builder.Services.AddHttpClient("BitacoraClient", client =>
+{
+    client.BaseAddress = new Uri("http://localhost:5210");
+});
+
+builder.Services.AddHttpClient("AuthClient", client =>
+{
+    client.BaseAddress = new Uri("http://localhost:5233");
+});
+
+builder.Services.AddSingleton<IDbConnectionFactory, DbConnectionFactory>();
+builder.Services.AddScoped<IMatriculaRepository, MatriculaRepository>();
+builder.Services.AddScoped<IMatriculaService, MatriculaService>();
+builder.Services.AddScoped<IPreMatriculaRepository, PreMatriculaRepository>();
+builder.Services.AddScoped<IPreMatriculaService, PreMatriculaService>();
+builder.Services.AddScoped<IEstudianteRepository, EstudianteRepository>();
+builder.Services.AddScoped<IEstudianteService, EstudianteService>();
+builder.Services.AddScoped<IDireccionRepository, DireccionRepository>();
+builder.Services.AddScoped<IDireccionService, DireccionService>();
+builder.Services.AddScoped<INotasRepository, NotasRepository>();
+builder.Services.AddScoped<INotasService, NotasService>();
+
+builder.Services.AddHttpClient();
+
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "API Matriculas - PV_NA",
+        Version = "v1",
+        Description = "Microservicio de Matrícula y gestión académica."
+    });
+});
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "API Matriculas - PV_NA v1");
+    });
 }
 
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast = Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast")
-.WithOpenApi();
+app.MapPreMatriculaEndpoints();
+app.MapMatriculaEndpoints();
+app.MapEstudianteEndpoints();
+app.MapDireccionEndpoints();
+app.MapNotasEndpoints();
 
 app.Run();
-
-internal record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
