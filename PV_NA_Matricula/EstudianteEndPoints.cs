@@ -3,42 +3,64 @@ using PV_NA_Matricula.Services;
 
 namespace PV_NA_Matricula
 {
-	public static class EstudianteEndPoints
-	{
-		public static void MapEstudianteEndpoints(this WebApplication app)
-		{
-			var group = app.MapGroup("/expediente");
+    public static class EstudianteEndpoints
+    {
+        public static void MapEstudianteEndpoints(this WebApplication app)
+        {
+            // ======================================================
+            //  Obtener todos los expedientes de estudiantes
+            // ======================================================
+            app.MapGet("/expediente", async (int idUsuario, IEstudianteService service) =>
+            {
+                var estudiantes = await service.GetAllAsync(idUsuario);
+                return Results.Ok(estudiantes);
+            })
+            .WithSummary("Obtiene la lista completa de expedientes de estudiantes y registra la acción en bitácora.");
 
-			group.MapGet("/", async (IEstudianteService service) =>
-			{
-				var data = await service.GetAllAsync();
-				return Results.Ok(data);
-			});
+            // ======================================================
+            //  Obtener expediente por ID
+            // ======================================================
+            app.MapGet("/expediente/{id:int}", async (int id, int idUsuario, IEstudianteService service) =>
+            {
+                var estudiante = await service.GetByIdAsync(id, idUsuario);
+                return estudiante is not null
+                    ? Results.Ok(estudiante)
+                    : Results.NotFound(new { message = "Expediente no encontrado." });
+            })
+            .WithSummary("Obtiene un expediente específico por su ID y registra la acción en bitácora.");
 
-			group.MapGet("/{id}", async (int id, IEstudianteService service) =>
-			{
-				var item = await service.GetByIdAsync(id);
-				return item is not null ? Results.Ok(item) : Results.NotFound();
-			});
+            // ======================================================
+            //  Crear nuevo expediente
+            // ======================================================
+            app.MapPost("/expediente", async (Estudiante estudiante, int idUsuario, IEstudianteService service) =>
+            {
+                var id = await service.CreateAsync(estudiante, idUsuario);
+                return Results.Created($"/expediente/{id}", estudiante);
+            })
+            .WithSummary("Crea un nuevo expediente de estudiante y registra la acción en bitácora.");
 
-			group.MapPost("/", async (Estudiante e, IEstudianteService service) =>
-			{
-				var id = await service.CreateAsync(e);
-				return Results.Created($"/expediente/{id}", e);
-			});
+            // ======================================================
+            //  Actualizar expediente existente
+            // ======================================================
+            app.MapPut("/expediente/{id:int}", async (int id, Estudiante estudiante, int idUsuario, IEstudianteService service) =>
+            {
+                if (id != estudiante.ID_Estudiante)
+                    return Results.BadRequest(new { message = "El ID de la URL no coincide con el del expediente." });
 
-			group.MapPut("/{id}", async (int id, Estudiante e, IEstudianteService service) =>
-			{
-				if (id != e.ID_Estudiante) return Results.BadRequest();
-				await service.UpdateAsync(e);
-				return Results.NoContent(); 
-			});
+                await service.UpdateAsync(estudiante, idUsuario);
+                return Results.Ok(new { message = "Expediente actualizado correctamente." });
+            })
+            .WithSummary("Actualiza los datos de un expediente existente y registra la acción en bitácora.");
 
-			group.MapDelete("/{id}", async (int id, IEstudianteService service) =>
-			{
-				await service.DeleteAsync(id);
-				return Results.NoContent();
-			});
-		}
-	}
+            // ======================================================
+            //  Eliminar expediente
+            // ======================================================
+            app.MapDelete("/expediente/{id:int}", async (int id, int idUsuario, IEstudianteService service) =>
+            {
+                await service.DeleteAsync(id, idUsuario);
+                return Results.Ok(new { message = "Expediente eliminado correctamente." });
+            })
+            .WithSummary("Elimina un expediente de estudiante por su ID y registra la acción en bitácora.");
+        }
+    }
 }

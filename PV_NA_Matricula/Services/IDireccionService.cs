@@ -2,11 +2,10 @@
 
 namespace PV_NA_Matricula.Services
 {
-	public interface IDireccionService
-	{
-		Task<IEnumerable<Provincia>> GetProvinciasAsync();
-		Task<IEnumerable<Canton>> GetCantonesPorProvinciaAsync(int idProvincia);
-		Task<IEnumerable<Distrito>> GetDistritosAsync(int idProvincia, int idCanton);
-	}
+    public interface IDireccionService
+    {
+        Task<IEnumerable<Provincia>> GetProvinciasAsync(int idUsuario);
+        Task<IEnumerable<Canton>> GetCantonesPorProvinciaAsync(int idProvincia, int idUsuario);
+        Task<IEnumerable<Distrito>> GetDistritosAsync(int idProvincia, int idCanton, int idUsuario);
+    }
 }
- 

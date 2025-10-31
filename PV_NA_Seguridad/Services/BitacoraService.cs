@@ -27,3 +27,4 @@ namespace PV_NA_Seguridad.Services
         public Task<IEnumerable<Bitacora>> ListarPorUsuarioAsync(int idUsuario) => _repository.GetByUsuarioAsync(idUsuario);
     }
 }
+

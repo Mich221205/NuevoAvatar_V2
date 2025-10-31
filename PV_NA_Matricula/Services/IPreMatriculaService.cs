@@ -2,13 +2,12 @@
 
 namespace PV_NA_Matricula.Services
 {
-	public interface IPreMatriculaService
-	{
-		Task<IEnumerable<PreMatricula>> GetAllAsync();
-		Task<PreMatricula?> GetByIdAsync(int id);
-		Task<int> CreateAsync(PreMatricula pre);
-		Task<int> UpdateAsync(PreMatricula pre);
-		Task<int> DeleteAsync(int id);
-	}
+    public interface IPreMatriculaService
+    {
+        Task<IEnumerable<PreMatricula>> GetAllAsync(int idUsuario);
+        Task<PreMatricula?> GetByIdAsync(int id, int idUsuario);
+        Task<int> CreateAsync(PreMatricula pre, int idUsuario);
+        Task<int> UpdateAsync(PreMatricula pre, int idUsuario);
+        Task<int> DeleteAsync(int id, int idUsuario);
+    }
 }
- 
