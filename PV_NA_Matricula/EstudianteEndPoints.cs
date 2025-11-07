@@ -31,16 +31,24 @@ namespace PV_NA_Matricula
 
             // ======================================================
             //  Crear nuevo expediente
+            //  -> Devuelve 201 Created con el objeto creado como body
             // ======================================================
             app.MapPost("/expediente", async (Estudiante estudiante, int idUsuario, IEstudianteService service) =>
             {
                 var id = await service.CreateAsync(estudiante, idUsuario);
-                return Results.Created($"/expediente/{id}", estudiante);
+
+                // Volvemos a leer para responder con el body creado
+                var creado = await service.GetByIdAsync(id, idUsuario);
+
+                return creado is null
+                    ? Results.Created($"/expediente/{id}", estudiante) // fallback si no se pudo leer
+                    : Results.Created($"/expediente/{id}", creado);
             })
             .WithSummary("Crea un nuevo expediente de estudiante y registra la acción en bitácora.");
 
             // ======================================================
             //  Actualizar expediente existente
+            //  -> Devuelve 200 OK con el objeto actualizado como body
             // ======================================================
             app.MapPut("/expediente/{id:int}", async (int id, Estudiante estudiante, int idUsuario, IEstudianteService service) =>
             {
@@ -48,17 +56,30 @@ namespace PV_NA_Matricula
                     return Results.BadRequest(new { message = "El ID de la URL no coincide con el del expediente." });
 
                 await service.UpdateAsync(estudiante, idUsuario);
-                return Results.Ok(new { message = "Expediente actualizado correctamente." });
+
+                // Leemos el registro actualizado para retornarlo en el body
+                var actualizado = await service.GetByIdAsync(id, idUsuario);
+                return actualizado is not null
+                    ? Results.Ok(actualizado)
+                    : Results.Ok(new { message = "Expediente actualizado correctamente." });
             })
             .WithSummary("Actualiza los datos de un expediente existente y registra la acción en bitácora.");
 
             // ======================================================
             //  Eliminar expediente
+            //  -> Devuelve 200 OK con el objeto eliminado como body
             // ======================================================
             app.MapDelete("/expediente/{id:int}", async (int id, int idUsuario, IEstudianteService service) =>
             {
-                await service.DeleteAsync(id, idUsuario);
-                return Results.Ok(new { message = "Expediente eliminado correctamente." });
+                // Leemos ANTES de eliminar para poder devolver el body del eliminado
+                var existente = await service.GetByIdAsync(id, idUsuario);
+                if (existente is null)
+                    return Results.NotFound(new { message = "Expediente no encontrado." });
+
+                // ⬇️ CAMBIO: pasar el body al service para que Bitácora lo guarde
+                await service.DeleteAsync(id, idUsuario, existente);
+
+                return Results.Ok(existente); // cuerpo con el expediente eliminado
             })
             .WithSummary("Elimina un expediente de estudiante por su ID y registra la acción en bitácora.");
         }

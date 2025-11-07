@@ -9,34 +9,56 @@ namespace PV_NA_Matricula
         {
             // ======================================================
             //  Crear una nueva matrícula
+            //  201 Created con el objeto creado como body
             // ======================================================
             app.MapPost("/matricula", async (Matricula matricula, int idUsuario, IMatriculaService service) =>
             {
                 var id = await service.CreateAsync(matricula, idUsuario);
-                return Results.Created($"/matricula/{id}", matricula);
+
+                // Intentamos leer lo recién creado para devolverlo como body
+                var creada = await service.GetByIdAsync(id, idUsuario);
+
+                return creada is null
+                    ? Results.Created($"/matricula/{id}", matricula) // fallback si no se pudo leer
+                    : Results.Created($"/matricula/{id}", creada);
             })
             .WithSummary("Crea una nueva matrícula para un estudiante y registra la acción en bitácora.");
 
             // ======================================================
             //  Actualizar una matrícula existente
+            //  -> 200 OK con el objeto actualizado como body
             // ======================================================
             app.MapPut("/matricula/{id:int}", async (int id, Matricula matricula, int idUsuario, IMatriculaService service) =>
             {
                 if (id != matricula.ID_Matricula)
                     return Results.BadRequest(new { message = "El ID de la URL no coincide con el de la matrícula." });
 
+                // Actualizamos
                 await service.UpdateAsync(matricula, idUsuario);
-                return Results.Ok(new { message = "Matrícula actualizada correctamente." });
+
+                // Leemos la matrícula actualizada para retornarla en el body
+                var actualizada = await service.GetByIdAsync(id, idUsuario);
+                return actualizada is not null
+                    ? Results.Ok(actualizada)
+                    : Results.Ok(new { message = "Matrícula actualizada correctamente." });
             })
             .WithSummary("Actualiza los datos de una matrícula existente y registra la acción en bitácora.");
 
             // ======================================================
             //  Eliminar una matrícula
+            //  -> 200 OK con el objeto eliminado como body
             // ======================================================
             app.MapDelete("/matricula/{id:int}", async (int id, int idUsuario, IMatriculaService service) =>
             {
-                await service.DeleteAsync(id, idUsuario);
-                return Results.Ok(new { message = "Matrícula eliminada correctamente." });
+                // Leemos ANTES de eliminar para poder devolver el body del eliminado
+                var existente = await service.GetByIdAsync(id, idUsuario);
+                if (existente is null)
+                    return Results.NotFound(new { message = "Matrícula no encontrada." });
+
+                // ⬇️ ÚNICO CAMBIO: pasar el body al service para bitácora
+                await service.DeleteAsync(id, idUsuario, existente);
+
+                return Results.Ok(existente); // devolvemos la matrícula eliminada
             })
             .WithSummary("Elimina una matrícula por su ID y registra la acción en bitácora.");
 

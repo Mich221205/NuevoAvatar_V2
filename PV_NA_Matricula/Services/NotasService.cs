@@ -1,6 +1,9 @@
 ﻿using PV_NA_Matricula.Entities;
 using PV_NA_Matricula.Repository;
 using System.Net.Http.Json;
+//para serializar el body en Accion
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace PV_NA_Matricula.Services
 {
@@ -8,6 +11,14 @@ namespace PV_NA_Matricula.Services
     {
         private readonly INotasRepository _repo;
         private readonly HttpClient _bitacoraClient;
+
+        // opciones de serialización compacta
+        private static readonly JsonSerializerOptions _jsonOpts = new()
+        {
+            ReferenceHandler = ReferenceHandler.IgnoreCycles,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+            WriteIndented = false
+        };
 
         public NotasService(INotasRepository repo, IHttpClientFactory httpClientFactory)
         {
@@ -40,7 +51,11 @@ namespace PV_NA_Matricula.Services
             int result = await _repo.CargarDesgloseAsync(rubros, idGrupo);
 
             //  Registrar evento en bitácora
-            await RegistrarBitacoraAsync(idUsuario, $"El usuario {idUsuario} cargó el desglose de rubros para el grupo {idGrupo}.");
+            await RegistrarBitacoraAsync(
+                idUsuario,
+                $"El usuario {idUsuario} cargó el desglose de rubros para el grupo {idGrupo}.",
+                new { idGrupo, rubros, afectados = result }
+            );
 
             return result;
         }
@@ -57,8 +72,11 @@ namespace PV_NA_Matricula.Services
             int result = await _repo.AsignarNotaRubroAsync(nota);
 
             //  Registrar evento en bitácora
-            await RegistrarBitacoraAsync(idUsuario,
-                $"El usuario {idUsuario} asignó una nota de {nota.Valor} al rubro {nota.ID_Rubro} para el estudiante {nota.ID_Estudiante}.");
+            await RegistrarBitacoraAsync(
+                idUsuario,
+                $"El usuario {idUsuario} asignó/actualizó nota de rubro.",
+                new { nota, afectados = result }
+            );
 
             return result;
         }
@@ -71,7 +89,11 @@ namespace PV_NA_Matricula.Services
                 throw new Exception("No se encontraron rubros para este grupo.");
 
             //  Registrar consulta
-            await RegistrarBitacoraAsync(idUsuario, $"El usuario {idUsuario} consultó el desglose de rubros para el grupo {idGrupo}.");
+            await RegistrarBitacoraAsync(
+                idUsuario,
+                $"El usuario {idUsuario} consultó el desglose de rubros para el grupo {idGrupo}.",
+                new { idGrupo, resultado = data }
+            );
 
             return data;
         }
@@ -84,7 +106,11 @@ namespace PV_NA_Matricula.Services
                 throw new Exception("No existen notas registradas para este estudiante en este grupo.");
 
             //  Registrar consulta
-            await RegistrarBitacoraAsync(idUsuario, $"El usuario {idUsuario} consultó las notas del estudiante {idEstudiante} en el grupo {idGrupo}.");
+            await RegistrarBitacoraAsync(
+                idUsuario,
+                $"El usuario {idUsuario} consultó las notas del estudiante {idEstudiante} en el grupo {idGrupo}.",
+                new { idEstudiante, idGrupo, resultado = data }
+            );
 
             return data;
         }
@@ -92,12 +118,31 @@ namespace PV_NA_Matricula.Services
         //  Método para registrar acciones en la bitácora
         private async Task RegistrarBitacoraAsync(int idUsuario, string accion)
         {
+            await RegistrarBitacoraAsync(idUsuario, accion, null);
+        }
+
+        //Bitácora que incrusta el body dentro del texto Accion
+        private async Task RegistrarBitacoraAsync(int idUsuario, string accion, object? body)
+        {
             try
             {
+                string accionConBody = accion;
+
+                if (body is not null)
+                {
+                    var json = JsonSerializer.Serialize(body, _jsonOpts);
+
+                    //limitar para no exceder tamaño de columna Accion
+                    const int max = 8000;
+                    var bodyJson = json.Length > max ? json.Substring(0, max) + "...(truncado)" : json;
+
+                    accionConBody = $"{accion} | Body: {bodyJson}";
+                }
+
                 await _bitacoraClient.PostAsJsonAsync("/bitacora", new
                 {
                     ID_Usuario = idUsuario,
-                    Accion = accion
+                    Accion = accionConBody
                 });
             }
             catch (Exception ex)

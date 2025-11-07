@@ -7,4 +7,5 @@ public interface IEstudianteService
     Task<int> CreateAsync(Estudiante e, int idUsuario);
     Task<int> UpdateAsync(Estudiante e, int idUsuario);
     Task<int> DeleteAsync(int id, int idUsuario);
+    Task<int> DeleteAsync(int id, int idUsuario, object? body);
 }

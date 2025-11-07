@@ -35,7 +35,13 @@ namespace PV_NA_Matricula
             app.MapPost("/prematricula", async (PreMatricula prematricula, int idUsuario, IPreMatriculaService service) =>
             {
                 var id = await service.CreateAsync(prematricula, idUsuario);
-                return Results.Created($"/prematricula/{id}", prematricula);
+
+                // Leemos la recién creada para devolverla como body
+                var creada = await service.GetByIdAsync(id, idUsuario);
+
+                return creada is null
+                    ? Results.Created($"/prematricula/{id}", prematricula) // fallback
+                    : Results.Created($"/prematricula/{id}", creada);
             })
             .WithSummary("Crea una nueva prematrícula y registra la acción en bitácora.");
 
@@ -48,7 +54,12 @@ namespace PV_NA_Matricula
                     return Results.BadRequest(new { message = "El ID de la URL no coincide con el de la prematrícula." });
 
                 await service.UpdateAsync(prematricula, idUsuario);
-                return Results.Ok(new { message = "Prematrícula actualizada correctamente." });
+
+                // Leemos la prematrícula actualizada para retornarla
+                var actualizada = await service.GetByIdAsync(id, idUsuario);
+                return actualizada is not null
+                    ? Results.Ok(actualizada)
+                    : Results.Ok(new { message = "Prematrícula actualizada correctamente." });
             })
             .WithSummary("Actualiza los datos de una prematrícula existente y registra la acción en bitácora.");
 
@@ -57,10 +68,18 @@ namespace PV_NA_Matricula
             // ======================================================
             app.MapDelete("/prematricula/{id:int}", async (int id, int idUsuario, IPreMatriculaService service) =>
             {
-                await service.DeleteAsync(id, idUsuario);
-                return Results.Ok(new { message = "Prematrícula eliminada correctamente." });
+                // Leemos antes de eliminar para poder devolver el body del eliminado
+                var existente = await service.GetByIdAsync(id, idUsuario);
+                if (existente is null)
+                    return Results.NotFound(new { message = "Prematrícula no encontrada." });
+
+                // pasar el body al service para que Bitácora lo guarde
+                await service.DeleteAsync(id, idUsuario, existente);
+
+                return Results.Ok(existente);
             })
             .WithSummary("Elimina una prematrícula por su ID y registra la acción en bitácora.");
         }
     }
 }
+

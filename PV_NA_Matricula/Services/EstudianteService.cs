@@ -2,6 +2,9 @@
 using PV_NA_Matricula.Repository;
 using System.Text.RegularExpressions;
 using System.Net.Http.Json;
+// ➕ NUEVO: para serializar el body en Accion
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace PV_NA_Matricula.Services
 {
@@ -9,6 +12,14 @@ namespace PV_NA_Matricula.Services
     {
         private readonly IEstudianteRepository _repo;
         private readonly HttpClient _bitacoraClient;
+
+        //opciones de serialización compacta
+        private static readonly JsonSerializerOptions _jsonOpts = new()
+        {
+            ReferenceHandler = ReferenceHandler.IgnoreCycles,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+            WriteIndented = false
+        };
 
         public EstudianteService(IEstudianteRepository repo, IHttpClientFactory httpClientFactory)
         {
@@ -20,9 +31,11 @@ namespace PV_NA_Matricula.Services
         {
             var data = await _repo.GetAllAsync();
 
+            // Incluir body dentro de Accion
             await RegistrarBitacoraAsync(
                 idUsuario,
-                $"El usuario {idUsuario} consultó el listado de estudiantes."
+                $"El usuario {idUsuario} consultó el listado de estudiantes.",
+                body: new { resultado = data }
             );
 
             return data;
@@ -32,22 +45,30 @@ namespace PV_NA_Matricula.Services
         {
             var est = await _repo.GetByIdAsync(id);
 
+            // Incluir body del encontrado
             await RegistrarBitacoraAsync(
                 idUsuario,
-                $"El usuario {idUsuario} consultó el estudiante con ID {id}."
+                $"El usuario {idUsuario} consultó el estudiante con ID {id}.",
+                body: (object?)est ?? new { ID_Estudiante = id, encontrado = false }
             );
 
             return est;
         }
-
 
         public async Task<int> CreateAsync(Estudiante e, int idUsuario)
         {
             ValidarEstudiante(e);
             int id = await _repo.InsertAsync(e);
 
-            //  Registrar en Bitácora
-            await RegistrarBitacoraAsync(idUsuario, $"El usuario {idUsuario} creó un estudiante con ID {id}, nombre {e.Nombre}.");
+            // reflejamos el ID generado en el body
+            e.ID_Estudiante = id;
+
+            // Registrar en Bitácora con body
+            await RegistrarBitacoraAsync(
+                idUsuario,
+                $"El usuario {idUsuario} creó un estudiante con ID {id}, nombre {e.Nombre}.",
+                body: e
+            );
 
             return id;
         }
@@ -57,8 +78,12 @@ namespace PV_NA_Matricula.Services
             ValidarEstudiante(e);
             int result = await _repo.UpdateAsync(e);
 
-            //  Registrar en Bitácora
-            await RegistrarBitacoraAsync(idUsuario, $"El usuario {idUsuario} actualizó el estudiante con ID {e.ID_Estudiante}, nombre {e.Nombre}.");
+            // Registrar en Bitácora con body
+            await RegistrarBitacoraAsync(
+                idUsuario,
+                $"El usuario {idUsuario} actualizó el estudiante con ID {e.ID_Estudiante}, nombre {e.Nombre}.",
+                body: e
+            );
 
             return result;
         }
@@ -73,15 +98,51 @@ namespace PV_NA_Matricula.Services
             return result;
         }
 
-        //  Método para registrar acciones en la bitácora
+        //Overload para pasar el objeto eliminado y guardarlo como body en bitácora
+        public async Task<int> DeleteAsync(int id, int idUsuario, object? body)
+        {
+            int result = await _repo.DeleteAsync(id);
+
+            await RegistrarBitacoraAsync(
+                idUsuario,
+                $"El usuario {idUsuario} eliminó el estudiante con ID {id}.",
+                body: body ?? new { ID_Estudiante = id }
+            );
+
+            return result;
+        }
+
+        // ======================================================
+        //  Bitácora
+        //  Versión original 
+        // ======================================================
         private async Task RegistrarBitacoraAsync(int idUsuario, string accion)
+        {
+            await RegistrarBitacoraAsync(idUsuario, accion, body: null);
+        }
+
+        // Bitácora con body incrustado en Accion
+        private async Task RegistrarBitacoraAsync(int idUsuario, string accion, object? body)
         {
             try
             {
+                string accionConBody = accion;
+
+                if (body is not null)
+                {
+                    var json = JsonSerializer.Serialize(body, _jsonOpts);
+
+                    //limita para no exceder el tamaño de la columna Accion
+                    const int max = 8000;
+                    var bodyJson = json.Length > max ? json.Substring(0, max) + "...(truncado)" : json;
+
+                    accionConBody = $"{accion} | Body: {bodyJson}";
+                }
+
                 await _bitacoraClient.PostAsJsonAsync("/bitacora", new
                 {
                     ID_Usuario = idUsuario,
-                    Accion = accion
+                    Accion = accionConBody
                 });
             }
             catch (Exception ex)

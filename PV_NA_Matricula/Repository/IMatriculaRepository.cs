@@ -8,6 +8,7 @@ namespace PV_NA_Matricula.Repository
 		Task<int> UpdateAsync(Matricula m);
 		Task<int> DeleteAsync(int id);
 		Task<IEnumerable<object>> GetEstudiantesPorCursoYGrupoAsync(int idCurso, int idGrupo);
-	}
+		Task<Matricula?> GetByIdAsync(int id);
+    }
 }
  

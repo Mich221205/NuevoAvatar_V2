@@ -58,6 +58,21 @@ namespace PV_NA_Matricula.Repository
 
 			return await conn.QueryAsync<object>(sql, new { idCurso, idGrupo });
 		}
-	}
+
+        public async Task<Matricula?> GetByIdAsync(int id)
+        {
+            using var conn = await _factory.CreateConnectionAsync();
+            var sql = @"
+        SELECT TOP 1
+            ID_Matricula,
+            ID_Estudiante,
+            ID_Curso,
+            ID_Grupo,
+            ID_Periodo
+        FROM Matricula
+        WHERE ID_Matricula = @id;";
+            return await conn.QuerySingleOrDefaultAsync<Matricula>(sql, new { id });
+        }
+    }
 }
 
