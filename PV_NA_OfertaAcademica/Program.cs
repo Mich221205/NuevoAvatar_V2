@@ -23,6 +23,7 @@ builder.Services.AddSingleton<IDbConnectionFactory, DbConnectionFactory>();
 builder.Services.AddHttpClient("BitacoraClient", client =>
 {
     client.BaseAddress = new Uri("http://localhost:5210"); // Puerto del microservicio Bitácora
+    client.BaseAddress = new Uri("http://localhost:5062"); // Puerto del microservicio Bitácora
 });
 builder.Services.AddScoped<BitacoraService>();
 
@@ -31,6 +32,7 @@ builder.Services.AddScoped<BitacoraService>();
 builder.Services.AddHttpClient("AuthClient", client =>
 {
     client.BaseAddress = new Uri("http://localhost:5233"); // Puerto del microservicio UsuariosRoles
+    client.BaseAddress = new Uri("http://localhost:5189"); // Puerto del microservicio UsuariosRoles
 });
 
 // Dependencias
