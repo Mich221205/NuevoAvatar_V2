@@ -86,3 +86,12 @@ INSERT INTO Modulo (Nombre) VALUES
 ('Integración'),
 ('Reportes');
 
+INSERT INTO Usuario (Email, Tipo_Identificacion, Identificacion, Nombre, Contrasena, ID_Rol)
+VALUES
+('admin@cuc.ac.cr', 'CED', '111111111', 'Administrador General', '1234', 1),
+('ana.castro@cuc.ac.cr', 'CED', '101010101', 'Ana Castro', '1234', 2),
+('luis.rojas@cuc.ac.cr', 'CED', '202020202', 'Luis Rojas', '1234', 3),
+('carlos.solano@cuc.ac.cr', 'CED', '303030303', 'Carlos Solano', '1234', 2),
+('maria.vega@cuc.ac.cr', 'PAS', '404040404', 'María Vega', '1234', 2),
+('fernanda.mora@cuc.ac.cr', 'CED', '505050505', 'Fernanda Mora', '1234', 2),
+('rectoria@cuc.ac.cr', 'CED', '606060606', 'Rectoría CUC', '1234', 2);
