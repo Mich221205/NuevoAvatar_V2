@@ -1,42 +1,110 @@
+using Microsoft.Data.SqlClient;
+using Microsoft.OpenApi.Models;
+using PV_NA_Notificaciones;
+using PV_NA_Notificaciones.Repository;
+using PV_NA_Notificaciones.Services;
+using System.Data;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+
+builder.Services.AddHttpClient("BitacoraClient", client =>
+{
+    client.BaseAddress = new Uri("http://localhost:5210"); // Bitácora (GEN1)
+});
+
+builder.Services.AddHttpClient("AuthClient", client =>
+{
+    client.BaseAddress = new Uri("http://localhost:5233"); // UsuariosRoles (HU USR5)
+});
+
+
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "API Notificaciones - IPN3",
+        Version = "v1",
+        Description = "Servicio para gestión de notificaciones a estudiantes y docentes (HU IPN3)."
+    });
+
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        In = ParameterLocation.Header,
+        Description = "Ingrese el token JWT con el formato: Bearer {token}",
+        Name = "Authorization",
+        Type = SecuritySchemeType.ApiKey,
+        Scheme = "Bearer"
+    });
+
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            new string[] { }
+        }
+    });
+});
+
+builder.Services.AddScoped<IDbConnection>(sp =>
+    new SqlConnection(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddScoped<NotificacionRepository>();
+builder.Services.AddScoped<NotificacionService>();
+
+builder.Services.AddHttpClient();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+app.Use(async (context, next) =>
+{
+    if (context.Request.Path.StartsWithSegments("/swagger") ||
+        context.Request.Path.StartsWithSegments("/validate"))
+    {
+        await next();
+        return;
+    }
+
+    var token = context.Request.Headers["Authorization"].ToString().Replace("Bearer ", "");
+
+    if (string.IsNullOrWhiteSpace(token))
+    {
+        context.Response.StatusCode = 401;
+        await context.Response.WriteAsync("Token requerido.");
+        return;
+    }
+
+    var authClient = context.RequestServices.GetRequiredService<IHttpClientFactory>().CreateClient("AuthClient");
+    var response = await authClient.GetAsync($"/login/validate?token={token}");
+
+    if (!response.IsSuccessStatusCode)
+    {
+        context.Response.StatusCode = 401;
+        await context.Response.WriteAsync("Token inválido o expirado.");
+        return;
+    }
+
+    await next();
+});
+
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "API Notificaciones - IPN3 v1");
+    });
 }
 
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
 
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast = Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast")
-.WithOpenApi();
+app.MapNotificacionEndpoints();
 
 app.Run();
-
-internal record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
