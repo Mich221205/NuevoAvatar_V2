@@ -19,9 +19,19 @@ namespace PV_NA_Academico.Services
 
         public async Task<IEnumerable<ListadoEstudiante>> ObtenerPorPeriodoAsync(string periodo, int idUsuario)
         {
+          
+            if (string.IsNullOrWhiteSpace(periodo))
+                throw new ArgumentException("Debe indicar el período a consultar.");
+
+           
             var listado = await _repo.ObtenerPorPeriodoAsync(periodo);
 
-            var accion = $"El usuario {idUsuario} consultó listado de estudiantes del período {periodo}.";
+            
+            if (listado == null || !listado.Any())
+                throw new InvalidOperationException("No se encontraron estudiantes para el período indicado.");
+
+    
+            var accion = $"El usuario {idUsuario} consultó el listado de estudiantes del período {periodo}.";
             try
             {
                 await _bitacoraClient.PostAsJsonAsync("/bitacora", new
@@ -32,6 +42,7 @@ namespace PV_NA_Academico.Services
             }
             catch
             {
+                
             }
 
             return listado;

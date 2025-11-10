@@ -18,9 +18,21 @@ namespace PV_NA_Academico.Services
         public async Task<IEnumerable<HistorialAcademico>> ObtenerHistorialAsync(
             string tipoIdentificacion, string identificacion, int idUsuario)
         {
+           
+            if (string.IsNullOrWhiteSpace(tipoIdentificacion))
+                throw new ArgumentException("Debe indicar el tipo de identificación del estudiante.");
+
+            if (string.IsNullOrWhiteSpace(identificacion))
+                throw new ArgumentException("Debe indicar la identificación del estudiante.");
+
+          
             var historial = await _repository.ObtenerHistorialAsync(tipoIdentificacion, identificacion);
 
-            var accion = $"El usuario {idUsuario} consultó historial académico del estudiante {identificacion}.";
+            if (historial == null || !historial.Any())
+                throw new InvalidOperationException("No se encontraron cursos para el estudiante indicado.");
+
+           
+            var accion = $"El usuario {idUsuario} consultó el historial académico del estudiante {identificacion}.";
             await _httpClient.PostAsJsonAsync("/bitacora", new
             {
                 ID_Usuario = idUsuario,
