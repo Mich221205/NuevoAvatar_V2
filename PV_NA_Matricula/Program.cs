@@ -20,6 +20,11 @@ builder.Services.AddHttpClient("AuthClient", client =>
     client.BaseAddress = new Uri("http://localhost:5189");
 });
 
+builder.Services.AddHttpClient("OfertaClient", client =>
+{
+    client.BaseAddress = new Uri("http://localhost:5048");
+});
+
 // ======================================================
 // 🔹 Repositorios y Servicios
 // ======================================================
@@ -36,6 +41,8 @@ builder.Services.AddScoped<INotasRepository, NotasRepository>();
 builder.Services.AddScoped<INotasService, NotasService>();
 
 builder.Services.AddHttpClient();
+
+builder.Services.AddHttpContextAccessor();
 
 // ======================================================
 // 🔹 Swagger con soporte JWT
