@@ -4,6 +4,8 @@ using System.Net.Http.Json;
 //para serializar el body en Accion
 using System.Text.Json;
 using System.Text.Json.Serialization;
+// NUEVO
+using Microsoft.AspNetCore.Http;
 
 namespace PV_NA_Matricula.Services
 {
@@ -11,6 +13,12 @@ namespace PV_NA_Matricula.Services
     {
         private readonly IPreMatriculaRepository _repo;
         private readonly HttpClient _bitacoraClient;
+
+        // cliente hacia Oferta Académica para validar periodos
+        private readonly HttpClient _ofertaClient;
+
+        // NUEVO: para leer el Authorization entrante y reenviarlo
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
         // opciones de serialización compacta
         private static readonly JsonSerializerOptions _jsonOpts = new()
@@ -20,10 +28,26 @@ namespace PV_NA_Matricula.Services
             WriteIndented = false
         };
 
-        public PreMatriculaService(IPreMatriculaRepository repo, IHttpClientFactory httpClientFactory)
+        // DTO local que mapea /periodo/{id} de Oferta
+        private sealed class PeriodoInfo
+        {
+            public int ID_Periodo { get; set; }
+            public int Anno { get; set; }
+            public int Numero { get; set; }
+            public DateTime Fecha_Inicio { get; set; }
+            public DateTime Fecha_Fin { get; set; }
+        }
+
+        // Agrego IHttpContextAccessor 
+        public PreMatriculaService(
+            IPreMatriculaRepository repo,
+            IHttpClientFactory httpClientFactory,
+            IHttpContextAccessor httpContextAccessor)
         {
             _repo = repo;
             _bitacoraClient = httpClientFactory.CreateClient("BitacoraClient");
+            _ofertaClient = httpClientFactory.CreateClient("OfertaClient");
+            _httpContextAccessor = httpContextAccessor;
         }
 
         public async Task<IEnumerable<PreMatricula>> GetAllAsync(int idUsuario)
@@ -56,6 +80,9 @@ namespace PV_NA_Matricula.Services
 
         public async Task<int> CreateAsync(PreMatricula pre, int idUsuario)
         {
+            //validar periodo FUTURO (fecha de inicio posterior a la actual)
+            await ValidarPeriodoFuturoAsync(pre.ID_Periodo);
+
             int id = await _repo.InsertAsync(pre);
 
             // reflejar el ID generado en el body
@@ -73,6 +100,9 @@ namespace PV_NA_Matricula.Services
 
         public async Task<int> UpdateAsync(PreMatricula pre, int idUsuario)
         {
+            // validar periodo FUTURO (fecha de inicio posterior a la actual)
+            await ValidarPeriodoFuturoAsync(pre.ID_Periodo);
+
             int result = await _repo.UpdateAsync(pre);
 
             //  Registrar en Bitácora
@@ -115,7 +145,7 @@ namespace PV_NA_Matricula.Services
         //  Método reutilizable para registrar acciones en Bitácora
         private async Task RegistrarBitacoraAsync(int idUsuario, string accion)
         {
-            await RegistrarBitacoraAsync(idUsuario, accion, null);
+            await RegistrarBitacoraAsync(idUsuario, accion, body: null);
         }
 
         // Bitácora que incrusta el body dentro del texto Accion
@@ -146,6 +176,35 @@ namespace PV_NA_Matricula.Services
             {
                 Console.WriteLine($" Error al registrar bitácora: {ex.Message}");
             }
+        }
+
+        // ======================================================
+        // Validación específica de periodo FUTURO (inicio > ahora)
+        // ======================================================
+        private async Task ValidarPeriodoFuturoAsync(int idPeriodo)
+        {
+            // Reenviar Authorization si viene en la request
+            var req = new HttpRequestMessage(HttpMethod.Get, $"/periodo/{idPeriodo}");
+            var auth = _httpContextAccessor?.HttpContext?.Request?.Headers["Authorization"].ToString();
+            if (!string.IsNullOrWhiteSpace(auth))
+                req.Headers.TryAddWithoutValidation("Authorization", auth);
+
+            var resp = await _ofertaClient.SendAsync(req);
+
+            if (!resp.IsSuccessStatusCode)
+            {
+                var detalle = await resp.Content.ReadAsStringAsync();
+                throw new Exception($"No fue posible validar el periodo {idPeriodo} en Oferta Académica. " +
+                                    $"Status: {(int)resp.StatusCode} {resp.StatusCode}. Respuesta: {detalle}");
+            }
+
+            var periodo = await resp.Content.ReadFromJsonAsync<PeriodoInfo>()
+                          ?? throw new Exception("Respuesta de periodo inválida.");
+
+            var ahora = DateTime.Now; // usa UtcNow si tus fechas están en UTC
+
+            if (!(periodo.Fecha_Inicio > ahora))
+                throw new Exception("Solo se pueden prematricular periodos FUTUROS (fecha de inicio posterior a la actual).");
         }
     }
 }
