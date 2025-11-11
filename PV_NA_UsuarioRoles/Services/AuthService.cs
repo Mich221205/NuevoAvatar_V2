@@ -1,8 +1,9 @@
-﻿using System.Security.Claims;
-using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
 using PV_NA_UsuariosRoles.Entities;
+using PV_NA_UsuariosRoles.Helpers;
 using PV_NA_UsuariosRoles.Repository;
+using System.Security.Claims;
 
 namespace PV_NA_UsuariosRoles.Services
 {
@@ -33,10 +34,28 @@ namespace PV_NA_UsuariosRoles.Services
         /// </summary>
         public async Task<object?> LoginAsync(string email, string password)
         {
+            // Buscar usuario por correo
             var user = await _usuarioRepo.GetUsuarioByEmailAsync(email);
-            if (user == null || user.Contrasena != password)
+            if (user == null)
                 return null;
 
+            // Desencriptar contraseña almacenada
+            string decryptedPassword;
+            try
+            {
+                decryptedPassword = AesEncryption.Decrypt(user.Contrasena);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al desencriptar contraseña de usuario {Email}", email);
+                return null;
+            }
+
+            // Comparar con la contraseña ingresada
+            if (decryptedPassword != password)
+                return null;
+
+            // Generar claims y tokens
             var claims = new[]
             {
                 new Claim(JwtRegisteredClaimNames.Sub, user.ID_Usuario.ToString()),
@@ -47,10 +66,10 @@ namespace PV_NA_UsuariosRoles.Services
             var (accessToken, expiresAt) = _tokenService.GenerateAccessToken(claims);
             var refreshToken = _tokenService.GenerateRefreshToken();
 
-            // Eliminar sesiones previas del usuario
+            // Eliminar sesiones previas
             await _sesionRepo.DeleteOldSessionsAsync(user.ID_Usuario);
 
-            // Guardar nueva sesión en base de datos
+            // Guardar nueva sesión
             var sesion = new Sesion
             {
                 ID_Usuario = user.ID_Usuario,
