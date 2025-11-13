@@ -12,9 +12,9 @@ namespace PV_NA_OfertaAcademica.Controllers
             var group = app.MapGroup("/periodo")
                            .WithOpenApi()
                            .WithTags("Periodo");
-                           //.RequireAuthorization(); // 🔒 Token validado con USR5
+            //.RequireAuthorization(); // 🔒 Token validado con USR5
 
-            // 🔹 Obtener todos los periodos
+            
             group.MapGet("/", async (PeriodoService service, HttpContext ctx) =>
             {
                 var idUsuario = ctx.User.FindFirst("usuarioID")?.Value ?? "0";
@@ -24,7 +24,7 @@ namespace PV_NA_OfertaAcademica.Controllers
             .WithSummary("Obtiene todos los periodos")
             .WithDescription("Retorna la lista completa de periodos registrados.");
 
-            // 🔹 Obtener periodo por ID
+            
             group.MapGet("/{id:int}", async (int id, PeriodoService service, HttpContext ctx) =>
             {
                 if (id <= 0)
@@ -39,7 +39,7 @@ namespace PV_NA_OfertaAcademica.Controllers
             })
             .WithSummary("Obtiene un periodo por su ID.");
 
-            // 🔹 Crear nuevo periodo
+            
             group.MapPost("/", async (PeriodoCreateDto dto, PeriodoService service, HttpContext ctx) =>
             {
                 var errores = ValidarPeriodo(dto.Anio, dto.Numero_Periodo, dto.Fecha_Inicio, dto.Fecha_Fin);
@@ -54,7 +54,7 @@ namespace PV_NA_OfertaAcademica.Controllers
             .WithSummary("Crea un nuevo periodo")
             .WithDescription("Registra un nuevo periodo en la base de datos y genera una bitácora.");
 
-            // 🔹 Modificar periodo
+            
             group.MapPut("/{id:int}", async (int id, PeriodoUpdateDto dto, PeriodoService service, HttpContext ctx) =>
             {
                 if (id <= 0)
@@ -77,7 +77,7 @@ namespace PV_NA_OfertaAcademica.Controllers
             })
             .WithSummary("Modifica un periodo existente.");
 
-            // 🔹 Eliminar periodo
+            
             group.MapDelete("/{id:int}", async (int id, PeriodoService service, HttpContext ctx) =>
             {
                 if (id <= 0)
@@ -95,19 +95,18 @@ namespace PV_NA_OfertaAcademica.Controllers
             .WithSummary("Elimina un periodo existente.");
         }
 
-        // 🧩 Método auxiliar de validación
         private static List<string> ValidarPeriodo(int anio, int numeroPeriodo, DateTime fechaInicio, DateTime fechaFin)
         {
             var errores = new List<string>();
 
-            if (anio < 2000 || anio > DateTime.Now.Year + 2)
-                errores.Add("El año del periodo no es válido.");
+            if (anio < 2000 || anio > 2100)
+                errores.Add("El año del periodo no es válido. (Debe estar entre 2000 y 2100)");
 
             if (numeroPeriodo <= 0 || numeroPeriodo > 4)
                 errores.Add("El número de periodo debe estar entre 1 y 4.");
 
-            if (fechaFin <= fechaInicio)
-                errores.Add("La fecha de fin debe ser posterior a la fecha de inicio.");
+            if (fechaFin < fechaInicio)
+                errores.Add("La fecha de fin debe ser posterior o igual a la fecha de inicio.");
 
             return errores;
         }

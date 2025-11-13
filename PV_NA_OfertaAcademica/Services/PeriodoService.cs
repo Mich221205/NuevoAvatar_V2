@@ -33,8 +33,16 @@ namespace PV_NA_OfertaAcademica.Services
 
         public async Task CrearAsync(PeriodoCreateDto dto, string usuario)
         {
-            if (dto.Fecha_Fin <= dto.Fecha_Inicio)
-                throw new ArgumentException("La fecha de fin debe ser posterior a la fecha de inicio.");
+            if (dto.Fecha_Fin < dto.Fecha_Inicio)
+                throw new ArgumentException("La fecha de fin debe ser mayor o igual a la fecha de inicio.");
+
+           
+            if (await _repo.ExisteMismoAnioNumeroAsync(dto.Anio, dto.Numero_Periodo))
+                throw new ArgumentException($"Ya existe un período {dto.Anio}-{dto.Numero_Periodo}.");
+
+            
+            if (await _repo.ExisteSolapamientoEnAnioAsync(dto.Anio, dto.Fecha_Inicio, dto.Fecha_Fin))
+                throw new ArgumentException("El rango de fechas se solapa con otro período del mismo año.");
 
             var periodo = new Periodo
             {
@@ -50,8 +58,16 @@ namespace PV_NA_OfertaAcademica.Services
 
         public async Task ModificarAsync(PeriodoUpdateDto dto, string usuario)
         {
-            if (dto.Fecha_Fin <= dto.Fecha_Inicio)
-                throw new ArgumentException("La fecha de fin debe ser posterior a la fecha de inicio.");
+            if (dto.Fecha_Fin < dto.Fecha_Inicio)
+                throw new ArgumentException("La fecha de fin debe ser mayor o igual a la fecha de inicio.");
+
+           
+            if (await _repo.ExisteMismoAnioNumeroAsync(dto.Anio, dto.Numero_Periodo, dto.ID_Periodo))
+                throw new ArgumentException($"Ya existe un período {dto.Anio}-{dto.Numero_Periodo}.");
+
+           
+            if (await _repo.ExisteSolapamientoEnAnioAsync(dto.Anio, dto.Fecha_Inicio, dto.Fecha_Fin, dto.ID_Periodo))
+                throw new ArgumentException("El rango de fechas se solapa con otro período del mismo año.");
 
             var anterior = await _repo.GetByIdAsync(dto.ID_Periodo);
 
@@ -65,7 +81,6 @@ namespace PV_NA_OfertaAcademica.Services
             };
 
             await _repo.UpdateAsync(periodo);
-
             var descripcion = $"Actualizó periodo: Antes={JsonSerializer.Serialize(anterior)}, Ahora={JsonSerializer.Serialize(periodo)}";
             await RegistrarBitacoraAsync(usuario, descripcion);
         }
@@ -96,5 +111,7 @@ namespace PV_NA_OfertaAcademica.Services
                 Console.WriteLine($"⚠️ Error al registrar bitácora: {ex.Message}");
             }
         }
+
+
     }
 }
