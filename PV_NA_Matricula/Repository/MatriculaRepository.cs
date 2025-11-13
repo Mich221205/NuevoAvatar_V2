@@ -73,6 +73,28 @@ namespace PV_NA_Matricula.Repository
         WHERE ID_Matricula = @id;";
             return await conn.QuerySingleOrDefaultAsync<Matricula>(sql, new { id });
         }
+        public async Task<bool> ExistsAsync(int idEstudiante, int idCurso, int idGrupo, int idPeriodo)
+        {
+            using var conn = await _factory.CreateConnectionAsync();
+
+            var sql = @"
+                SELECT COUNT(1)
+                FROM Matricula
+                WHERE ID_Estudiante = @idEstudiante
+                  AND ID_Curso      = @idCurso
+                  AND ID_Grupo      = @idGrupo
+                  AND ID_Periodo    = @idPeriodo;";
+
+            var count = await conn.ExecuteScalarAsync<int>(sql, new
+            {
+                idEstudiante,
+                idCurso,
+                idGrupo,
+                idPeriodo
+            });
+
+            return count > 0;
+        }
     }
 }
 

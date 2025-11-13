@@ -48,6 +48,12 @@ namespace PV_NA_Matricula.Services
 
         public async Task<int> CreateAsync(Matricula m, int idUsuario)
         {
+            // ✅ NUEVO: Validar que no exista ya la misma combinación estudiante–curso–grupo–periodo
+            if (await _repo.ExistsAsync(m.ID_Estudiante, m.ID_Curso, m.ID_Grupo, m.ID_Periodo))
+            {
+                throw new Exception("Ya existe una matrícula para ese estudiante en ese curso, grupo y período.");
+            }
+
             // validar periodo ACTIVO (fecha de inicio posterior a la actual)
             await ValidarPeriodoActivoAsync(m.ID_Periodo);
 
@@ -212,4 +218,5 @@ namespace PV_NA_Matricula.Services
         }
     }
 }
+
 
