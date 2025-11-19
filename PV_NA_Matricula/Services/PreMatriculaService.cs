@@ -21,7 +21,6 @@ namespace PV_NA_Matricula.Services
             WriteIndented = false
         };
 
-        
         private sealed class PeriodoInfo
         {
             public int ID_Periodo { get; set; }
@@ -31,7 +30,6 @@ namespace PV_NA_Matricula.Services
             public DateTime Fecha_Fin { get; set; }
         }
 
-        
         public PreMatriculaService(
             IPreMatriculaRepository repo,
             IHttpClientFactory httpClientFactory,
@@ -47,7 +45,6 @@ namespace PV_NA_Matricula.Services
         {
             var data = await _repo.GetAllAsync();
 
-            
             await RegistrarBitacoraAsync(
                 idUsuario,
                 $"El usuario {idUsuario} consultó todas las pre-matrículas.",
@@ -61,7 +58,6 @@ namespace PV_NA_Matricula.Services
         {
             var data = await _repo.GetByIdAsync(id);
 
-            
             await RegistrarBitacoraAsync(
                 idUsuario,
                 $"El usuario {idUsuario} consultó la pre-matrícula con ID {id}.",
@@ -73,7 +69,8 @@ namespace PV_NA_Matricula.Services
 
         public async Task<int> CreateAsync(PreMatricula pre, int idUsuario)
         {
-            
+            await ValidarDuplicadoAsync(pre, esActualizacion: false);
+
             await ValidarPeriodoFuturoAsync(pre.ID_Periodo);
 
             int id = await _repo.InsertAsync(pre);
@@ -91,12 +88,12 @@ namespace PV_NA_Matricula.Services
 
         public async Task<int> UpdateAsync(PreMatricula pre, int idUsuario)
         {
-            
+            await ValidarDuplicadoAsync(pre, esActualizacion: true);
+
             await ValidarPeriodoFuturoAsync(pre.ID_Periodo);
 
             int result = await _repo.UpdateAsync(pre);
 
-            
             await RegistrarBitacoraAsync(
                 idUsuario,
                 $"El usuario {idUsuario} actualizó la pre-matrícula con ID {pre.ID_Prematricula}.",
@@ -110,7 +107,6 @@ namespace PV_NA_Matricula.Services
         {
             int result = await _repo.DeleteAsync(id);
 
-           
             await RegistrarBitacoraAsync(
                 idUsuario,
                 $"El usuario {idUsuario} eliminó la pre-matrícula con ID {id}."
@@ -119,7 +115,6 @@ namespace PV_NA_Matricula.Services
             return result;
         }
 
-        
         public async Task<int> DeleteAsync(int id, int idUsuario, object? body)
         {
             int result = await _repo.DeleteAsync(id);
@@ -133,13 +128,11 @@ namespace PV_NA_Matricula.Services
             return result;
         }
 
-       
         private async Task RegistrarBitacoraAsync(int idUsuario, string accion)
         {
             await RegistrarBitacoraAsync(idUsuario, accion, body: null);
         }
 
-        
         private async Task RegistrarBitacoraAsync(int idUsuario, string accion, object? body)
         {
             try
@@ -150,7 +143,6 @@ namespace PV_NA_Matricula.Services
                 {
                     var json = JsonSerializer.Serialize(body, _jsonOpts);
 
-                    
                     const int max = 8000;
                     var bodyJson = json.Length > max ? json.Substring(0, max) + "...(truncado)" : json;
 
@@ -171,7 +163,6 @@ namespace PV_NA_Matricula.Services
 
         private async Task ValidarPeriodoFuturoAsync(int idPeriodo)
         {
-            
             var req = new HttpRequestMessage(HttpMethod.Get, $"/periodo/{idPeriodo}");
             var auth = _httpContextAccessor?.HttpContext?.Request?.Headers["Authorization"].ToString();
             if (!string.IsNullOrWhiteSpace(auth))
@@ -194,6 +185,22 @@ namespace PV_NA_Matricula.Services
             if (!(periodo.Fecha_Inicio > ahora))
                 throw new Exception("Solo se pueden prematricular periodos FUTUROS (fecha de inicio posterior a la actual).");
         }
+
+        private async Task ValidarDuplicadoAsync(PreMatricula pre, bool esActualizacion)
+        {
+            int? excluirId = esActualizacion ? pre.ID_Prematricula : null;
+
+            bool existe = await _repo.ExisteDuplicadoAsync(
+                pre.ID_Estudiante,
+                pre.ID_Curso,
+                pre.ID_Periodo,
+                excluirId
+            );
+
+            if (existe)
+            {
+                throw new Exception("Ya existe una prematrícula para este estudiante, curso y período.");
+            }
+        }
     }
 }
-

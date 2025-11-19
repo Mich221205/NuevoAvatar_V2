@@ -8,6 +8,7 @@ namespace PV_NA_Matricula.Repository
 		Task<int> InsertAsync(PreMatricula pre);
 		Task<int> UpdateAsync(PreMatricula pre);
 		Task<int> DeleteAsync(int id);
-	}
+        Task<bool> ExisteDuplicadoAsync(int idEstudiante, int idCurso, int idPeriodo, int? excluirId = null);
+    }
 }
  
