@@ -6,6 +6,24 @@ namespace PV_NA_UsuariosRoles.Endpoints
 {
     public static class UsuarioEndpoints
     {
+        private static string PrettyError(string raw)
+        {
+            if (string.IsNullOrWhiteSpace(raw))
+                return "Ha ocurrido un error inesperado.";
+
+            if (raw.Contains("UNIQUE KEY") && raw.Contains("duplicate"))
+                return "El correo ingresado ya está registrado. Intenta con otro.";
+
+            if (raw.Contains("FOREIGN KEY"))
+                return "Este usuario tiene registros asociados y no puede eliminarse.";
+
+            if (raw.Contains("conversion") || raw.Contains("varchar"))
+                return "Verifica que los datos ingresados tengan el formato correcto.";
+
+            return raw; // fallback
+        }
+
+
         public static void MapUsuarioEndpoints(this IEndpointRouteBuilder routes)
         {
             var group = routes.MapGroup("/usuario")
@@ -23,7 +41,7 @@ namespace PV_NA_UsuariosRoles.Endpoints
                 }
                 catch (Exception ex)
                 {
-                    return Results.BadRequest(new { error = ex.Message });
+                    return Results.BadRequest(new { error = PrettyError(ex.Message) });
                 }
             });
 
@@ -41,8 +59,9 @@ namespace PV_NA_UsuariosRoles.Endpoints
                 }
                 catch (Exception ex)
                 {
-                    return Results.BadRequest(new { error = ex.Message });
+                    return Results.BadRequest(new { error = PrettyError(ex.Message) });
                 }
+
             });
 
             // GET - Filtrar
@@ -57,8 +76,9 @@ namespace PV_NA_UsuariosRoles.Endpoints
                 }
                 catch (Exception ex)
                 {
-                    return Results.BadRequest(new { error = ex.Message });
+                    return Results.BadRequest(new { error = PrettyError(ex.Message) });
                 }
+
             });
 
             // POST - Crear
@@ -73,8 +93,9 @@ namespace PV_NA_UsuariosRoles.Endpoints
                 }
                 catch (Exception ex)
                 {
-                    return Results.BadRequest(new { error = ex.Message });
+                    return Results.BadRequest(new { error = PrettyError(ex.Message) });
                 }
+
             });
 
             // PUT - Actualizar
@@ -90,8 +111,9 @@ namespace PV_NA_UsuariosRoles.Endpoints
                 }
                 catch (Exception ex)
                 {
-                    return Results.BadRequest(new { error = ex.Message });
+                    return Results.BadRequest(new { error = PrettyError(ex.Message) });
                 }
+
             });
 
             // DELETE - Eliminar
@@ -109,9 +131,11 @@ namespace PV_NA_UsuariosRoles.Endpoints
                 }
                 catch (Exception ex)
                 {
-                    return Results.BadRequest(new { error = ex.Message });
+                    return Results.BadRequest(new { error = PrettyError(ex.Message) });
                 }
+
             });
+
         }
     }
 }

@@ -77,13 +77,25 @@ namespace PV_NA_UsuariosRoles.Services
             if (antes == null)
                 throw new Exception("No se encontró el usuario a actualizar.");
 
-            usuario.Contrasena = AesEncryption.Encrypt(usuario.Contrasena);
+            //prevenir error cuando la contraseña viene vacía
+            if (string.IsNullOrWhiteSpace(usuario.Contrasena))
+            {
+                // Mantener la contraseña actual si no se envía una nueva
+                usuario.Contrasena = antes.Contrasena;
+            }
+            else
+            {
+                // Solo encriptar si el usuario escribió una nueva contraseña
+                usuario.Contrasena = AesEncryption.Encrypt(usuario.Contrasena);
+            }
+
             await _repo.UpdateAsync(usuario);
 
             var despues = await _repo.GetByIdAsync(usuario.ID_Usuario);
             var detalle = JsonSerializer.Serialize(new { antes, despues }, new JsonSerializerOptions { WriteIndented = true });
             await RegistrarBitacora(idUsuarioAccion, detalle);
         }
+
 
         public async Task EliminarAsync(int id, int idUsuarioAccion)
         {
