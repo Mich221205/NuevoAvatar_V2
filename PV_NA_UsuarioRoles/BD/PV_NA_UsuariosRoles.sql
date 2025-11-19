@@ -33,8 +33,11 @@ CREATE TABLE Parametro (
 
 CREATE TABLE Modulo (
     ID_Modulo INT IDENTITY(1,1) PRIMARY KEY,
-    Nombre VARCHAR(100) NOT NULL
+    Nombre VARCHAR(100) NOT NULL,
+    Url VARCHAR(200) NOT NULL,
+    Orden INT NOT NULL DEFAULT 1
 );
+
 
 CREATE TABLE Sesion (
     ID_Sesion INT IDENTITY(1,1) PRIMARY KEY,
@@ -44,6 +47,21 @@ CREATE TABLE Sesion (
     Expira DATETIME NOT NULL,
     CONSTRAINT FK_Sesion_Usuario FOREIGN KEY (ID_Usuario) REFERENCES Usuario(ID_Usuario)
 );
+
+CREATE TABLE RolModulo (
+    ID_Rol INT NOT NULL,
+    ID_Modulo INT NOT NULL,
+    PuedeVer BIT NOT NULL DEFAULT 1,
+
+    CONSTRAINT PK_RolModulo PRIMARY KEY (ID_Rol, ID_Modulo),
+
+    CONSTRAINT FK_RolModulo_Rol FOREIGN KEY (ID_Rol)
+        REFERENCES Rol(ID_Rol),
+
+    CONSTRAINT FK_RolModulo_Modulo FOREIGN KEY (ID_Modulo)
+        REFERENCES Modulo(ID_Modulo)
+);
+
 
 /* ===========================
    INSERTS: Usuarios y Roles (Ejemplos)
