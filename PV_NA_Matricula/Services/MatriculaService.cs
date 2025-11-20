@@ -4,7 +4,6 @@ using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Http;
 using PV_NA_Matricula.Entities;
 using PV_NA_Matricula.Repository;
-using Microsoft.AspNetCore.Http;
 
 namespace PV_NA_Matricula.Services
 {
@@ -13,11 +12,9 @@ namespace PV_NA_Matricula.Services
         private readonly IMatriculaRepository _repo;
         private readonly HttpClient _bitacoraClient;
 
-        //cliente hacia Oferta Académica para validar periodos
         private readonly HttpClient _ofertaClient;
         private readonly IHttpContextAccessor _httpContextAccessor;
 
-        //opciones de serialización
         private static readonly JsonSerializerOptions _jsonOpts = new JsonSerializerOptions
         {
             ReferenceHandler = ReferenceHandler.IgnoreCycles,
@@ -25,7 +22,6 @@ namespace PV_NA_Matricula.Services
             WriteIndented = false
         };
 
-        // DTO local que mapea /periodo/{id} de Oferta
         private sealed class PeriodoInfo
         {
             public int ID_Periodo { get; set; }
@@ -35,10 +31,12 @@ namespace PV_NA_Matricula.Services
             public DateTime Fecha_Fin { get; set; }
         }
 
-        // reglas de validación (lo dejamos aunque no lo usemos ahora)
         private enum ReglaPeriodo { SoloFuturos, SoloActivos }
 
-        public MatriculaService(IMatriculaRepository repo, IHttpClientFactory httpClientFactory, IHttpContextAccessor httpContextAccessor)
+        public MatriculaService(
+            IMatriculaRepository repo,
+            IHttpClientFactory httpClientFactory,
+            IHttpContextAccessor httpContextAccessor)
         {
             _repo = repo;
             _bitacoraClient = httpClientFactory.CreateClient("BitacoraClient");
@@ -48,21 +46,22 @@ namespace PV_NA_Matricula.Services
 
         public async Task<int> CreateAsync(Matricula m, int idUsuario)
         {
-            // ✅ NUEVO: Validar que no exista ya la misma combinación estudiante–curso–grupo–periodo
-            if (await _repo.ExistsAsync(m.ID_Estudiante, m.ID_Curso, m.ID_Grupo, m.ID_Periodo))
-            {
-                throw new Exception("Ya existe una matrícula para ese estudiante en ese curso, grupo y período.");
-            }
+            var existeDuplicado = await _repo.ExisteDuplicadoAsync(
+                m.ID_Estudiante,
+                m.ID_Curso,
+                m.ID_Grupo,
+                excluirId: null 
+            );
 
-            // validar periodo ACTIVO (fecha de inicio posterior a la actual)
+            if (existeDuplicado)
+                throw new Exception("Ya existe una matrícula para este estudiante, curso y grupo.");
+
             await ValidarPeriodoActivoAsync(m.ID_Periodo);
 
             int id = await _repo.InsertAsync(m);
 
-            // Aseguramos que el body tenga el ID generado
             m.ID_Matricula = id;
 
-            //  Registrar en Bitácora
             await RegistrarBitacoraAsync(
                 idUsuario,
                 $"El usuario {idUsuario} creó una matrícula con ID {id} para el estudiante {m.ID_Estudiante}, curso {m.ID_Curso}, grupo {m.ID_Grupo}.",
@@ -74,12 +73,21 @@ namespace PV_NA_Matricula.Services
 
         public async Task<int> UpdateAsync(Matricula m, int idUsuario)
         {
-            // ⬇️ CAMBIO: validar periodo ACTIVO (fecha de inicio posterior a la actual)
+            var existeDuplicado = await _repo.ExisteDuplicadoAsync(
+                m.ID_Estudiante,
+                m.ID_Curso,
+                m.ID_Grupo,
+                excluirId: m.ID_Matricula 
+            );
+
+            if (existeDuplicado)
+                throw new Exception("Ya existe una matrícula para este estudiante, curso y grupo.");
+
             await ValidarPeriodoActivoAsync(m.ID_Periodo);
 
             int result = await _repo.UpdateAsync(m);
 
-            //  Registrar en Bitácora
+            
             await RegistrarBitacoraAsync(
                 idUsuario,
                 $"El usuario {idUsuario} actualizó la matrícula con ID {m.ID_Matricula}.",
@@ -89,12 +97,11 @@ namespace PV_NA_Matricula.Services
             return result;
         }
 
-        //Overload que permite pasar el body del eliminado
+        
         public async Task<int> DeleteAsync(int id, int idUsuario, object? body)
         {
             int result = await _repo.DeleteAsync(id);
 
-            //  Registrar en Bitácora
             await RegistrarBitacoraAsync(
                 idUsuario,
                 $"El usuario {idUsuario} eliminó la matrícula con ID {id}.",
@@ -108,7 +115,6 @@ namespace PV_NA_Matricula.Services
         {
             int result = await _repo.DeleteAsync(id);
 
-            //  Registrar en Bitácora
             await RegistrarBitacoraAsync(
                 idUsuario,
                 $"El usuario {idUsuario} eliminó la matrícula con ID {id}."
@@ -121,7 +127,6 @@ namespace PV_NA_Matricula.Services
         {
             var data = await _repo.GetEstudiantesPorCursoYGrupoAsync(idCurso, idGrupo);
 
-            // Registrar consulta en bitácora
             await RegistrarBitacoraAsync(
                 idUsuario,
                 $"El usuario {idUsuario} consultó estudiantes del curso {idCurso} y grupo {idGrupo}.",
@@ -135,7 +140,6 @@ namespace PV_NA_Matricula.Services
         {
             var entity = await _repo.GetByIdAsync(id);
 
-            // Registrar lectura en bitácora
             await RegistrarBitacoraAsync(
                 idUsuario,
                 $"El usuario {idUsuario} consultó la matrícula con ID {id}.",
@@ -145,17 +149,11 @@ namespace PV_NA_Matricula.Services
             return entity;
         }
 
-        // ======================================================
-        //  Método para registrar acciones en la bitácora
-        // ======================================================
         private async Task RegistrarBitacoraAsync(int idUsuario, string accion)
         {
             await RegistrarBitacoraAsync(idUsuario, accion, body: null);
         }
 
-        // ======================================================
-        //  Registrar en Bitácora con body opcional (como JSON)
-        // ======================================================
         private async Task RegistrarBitacoraAsync(int idUsuario, string accion, object? body)
         {
             try
@@ -169,12 +167,11 @@ namespace PV_NA_Matricula.Services
                         _jsonOpts
                     );
 
-                    // limita el tamaño para no romper tu columna de Accion
+                    
                     const int max = 8000;
                     bodyJson = json.Length > max ? json.Substring(0, max) + "...(truncado)" : json;
                 }
 
-                // Empaquetamos el body dentro del mismo campo Accion
                 var accionConBody = bodyJson is null ? accion : $"{accion} | Body: {bodyJson}";
 
                 await _bitacoraClient.PostAsJsonAsync("/bitacora", new
@@ -189,12 +186,8 @@ namespace PV_NA_Matricula.Services
             }
         }
 
-        // ======================================================
-        // Validación específica de periodo ACTIVO (inicio > ahora)
-        // ======================================================
         private async Task ValidarPeriodoActivoAsync(int idPeriodo)
         {
-            // Reenvía el Authorization si viene en la solicitud
             var request = new HttpRequestMessage(HttpMethod.Get, $"/periodo/{idPeriodo}");
             var auth = _httpContextAccessor?.HttpContext?.Request?.Headers["Authorization"].ToString();
             if (!string.IsNullOrWhiteSpace(auth))
@@ -212,11 +205,9 @@ namespace PV_NA_Matricula.Services
             var periodo = await resp.Content.ReadFromJsonAsync<PeriodoInfo>()
                           ?? throw new Exception("Respuesta de periodo inválida.");
 
-            var ahora = DateTime.Now; // usa UtcNow si tus fechas están en UTC
+            var ahora = DateTime.Now;
             if (!(periodo.Fecha_Inicio > ahora))
                 throw new Exception("Solo se pueden matricular periodos ACTIVOS (fecha de inicio posterior a la actual).");
         }
     }
 }
-
-

@@ -11,9 +11,9 @@ namespace PV_NA_OfertaAcademica
             var group = app.MapGroup("/profesor")
                            .WithOpenApi()
                            .WithTags("Profesor");
-                          // .RequireAuthorization(); 
+            
 
-            //  Obtener todos los profesores
+            
             group.MapGet("/", async (IProfesorService service, HttpContext ctx) =>
             {
                 var idUsuario = ctx.User.FindFirst("usuarioID")?.Value ?? "0";
@@ -23,7 +23,7 @@ namespace PV_NA_OfertaAcademica
             .WithSummary("Obtiene todos los profesores")
             .WithDescription("Devuelve la lista completa de profesores registrados.");
 
-            // Obtener profesor por ID
+         
             group.MapGet("/{id:int}", async (int id, IProfesorService service, HttpContext ctx) =>
             {
                 if (id <= 0)
@@ -36,7 +36,7 @@ namespace PV_NA_OfertaAcademica
             })
             .WithSummary("Obtiene un profesor por ID.");
 
-            //  Crear profesor
+            
             group.MapPost("/", async (Profesor profesor, IProfesorService service, HttpContext ctx) =>
             {
                 try
@@ -53,7 +53,7 @@ namespace PV_NA_OfertaAcademica
             .WithSummary("Crea un nuevo profesor.")
             .WithDescription("Registra un profesor nuevo y genera una bitácora.");
 
-            //  Actualizar profesor
+          
             group.MapPut("/", async (Profesor profesor, IProfesorService service, HttpContext ctx) =>
             {
                 try
@@ -69,21 +69,40 @@ namespace PV_NA_OfertaAcademica
             })
             .WithSummary("Modifica un profesor existente.");
 
-            //  Eliminar profesor
+          
             group.MapDelete("/{id:int}", async (int id, IProfesorService service, HttpContext ctx) =>
             {
                 try
                 {
                     if (id <= 0)
-                        return Results.BadRequest("El ID debe ser mayor a 0.");
+                        return Results.BadRequest(new { Error = "El ID debe ser mayor a 0." });
 
                     var idUsuario = ctx.User.FindFirst("usuarioID")?.Value ?? "0";
                     var result = await service.DeleteAsync(id, idUsuario);
+
                     return Results.Ok(new { Mensaje = $"Profesor con ID {id} eliminado correctamente." });
                 }
                 catch (Exception ex)
                 {
-                    return Results.BadRequest(new { Error = ex.Message });
+                    
+                    var msg = ex.Message ?? string.Empty;
+
+                    if (msg.Contains("No se encontró el profesor indicado", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return Results.NotFound(new { Error = "No se encontró el profesor indicado." });
+                    }
+
+                    
+                    if (msg.Contains("grupos en períodos activos", StringComparison.OrdinalIgnoreCase))
+                    {
+                        
+                        return Results.Conflict(new
+                        {
+                            Error = "No se puede eliminar el profesor porque dicta grupos en períodos activos."
+                        });
+                    }
+
+                    return Results.BadRequest(new { Error = msg });
                 }
             })
             .WithSummary("Elimina un profesor existente.");

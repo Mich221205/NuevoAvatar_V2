@@ -84,6 +84,13 @@ namespace PV_NA_OfertaAcademica.Services
             if (id <= 0)
                 throw new Exception("Debe especificar un ID de profesor válido.");
 
+            if (await _repo.TieneGruposActivosAsync(id))
+                throw new Exception("No se puede eliminar el profesor porque dicta grupos en períodos activos.");
+
+            if (await _repo.EsDirectorDeAlgunaCarreraAsync(id))
+                throw new Exception("No se puede eliminar el profesor porque es director de una carrera. " +
+                                    "Asigne otro director a la carrera antes de eliminarlo.");
+
             var profesor = await _repo.GetByIdAsync(id);
             var result = await _repo.DeleteAsync(id);
 
@@ -93,7 +100,7 @@ namespace PV_NA_OfertaAcademica.Services
             return result;
         }
 
-        // 🔹 Método auxiliar para registrar bitácoras (GEN1)
+
         private async Task RegistrarBitacoraAsync(string idUsuario, string accion)
         {
             try

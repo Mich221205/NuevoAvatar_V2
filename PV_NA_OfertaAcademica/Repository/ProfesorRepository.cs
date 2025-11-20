@@ -65,6 +65,34 @@ namespace PV_NA_OfertaAcademica.Repository
             var sql = "SELECT COUNT(*) FROM Profesor WHERE Email=@email";
             return await conn.ExecuteScalarAsync<int>(sql, new { email }) > 0;
         }
+
+        public async Task<bool> TieneGruposActivosAsync(int idProfesor)
+        {
+            using var conn = await _factory.CreateConnectionAsync();
+
+            var sql = @"
+                SELECT COUNT(1)
+                FROM Grupo g
+                INNER JOIN Periodo p ON g.ID_Periodo = p.ID_Periodo
+                WHERE g.ID_Profesor = @idProfesor
+                  AND GETDATE() BETWEEN p.Fecha_Inicio AND p.Fecha_Fin;";
+
+            var count = await conn.ExecuteScalarAsync<int>(sql, new { idProfesor });
+            return count > 0;
+        }
+
+        public async Task<bool> EsDirectorDeAlgunaCarreraAsync(int idProfesor)
+        {
+            using var conn = await _factory.CreateConnectionAsync();
+
+            var sql = @"
+        SELECT COUNT(*)
+        FROM Carrera
+        WHERE ID_Profesor_Director = @idProfesor";
+
+            var cantidad = await conn.ExecuteScalarAsync<int>(sql, new { idProfesor });
+            return cantidad > 0;
+        }
     }
 
 }

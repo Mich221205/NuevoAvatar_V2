@@ -2,7 +2,6 @@
 
 namespace PV_NA_OfertaAcademica.Repository
 {
-    // Interfaz para el repositorio de Profesores
     public interface IProfesorRepository
     {
         Task<IEnumerable<Profesor>> GetAllAsync();
@@ -12,5 +11,8 @@ namespace PV_NA_OfertaAcademica.Repository
         Task<int> DeleteAsync(int id);
         Task<bool> ExisteIdentificacionAsync(string identificacion);
         Task<bool> ExisteEmailAsync(string email);
+        Task<bool> TieneGruposActivosAsync(int idProfesor);
+
+        Task<bool> EsDirectorDeAlgunaCarreraAsync(int idProfesor);
     }
 }

@@ -9,8 +9,7 @@ namespace PV_NA_Matricula.Repository
 		Task<int> DeleteAsync(int id);
 		Task<IEnumerable<object>> GetEstudiantesPorCursoYGrupoAsync(int idCurso, int idGrupo);
 		Task<Matricula?> GetByIdAsync(int id);
-
-        Task<bool> ExistsAsync(int idEstudiante, int idCurso, int idGrupo, int idPeriodo);
+		Task<bool> ExisteDuplicadoAsync(int idEstudiante, int idCurso, int idGrupo, int? excluirId = null);
     }
 }
  

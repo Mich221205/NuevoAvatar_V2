@@ -1,4 +1,6 @@
-﻿namespace PV_NA_OfertaAcademica.Entities
+﻿using System.Text.Json.Serialization;
+
+namespace PV_NA_OfertaAcademica.Entities
 {
     public class Grupo
     {

@@ -1,5 +1,6 @@
-﻿using Dapper;
-using System.Data;
+﻿using System.Data;
+using Dapper;
+using Microsoft.AspNetCore.Connections;
 using PV_NA_Matricula.Entities;
 
 namespace PV_NA_Matricula.Repository
@@ -73,24 +74,24 @@ namespace PV_NA_Matricula.Repository
         WHERE ID_Matricula = @id;";
             return await conn.QuerySingleOrDefaultAsync<Matricula>(sql, new { id });
         }
-        public async Task<bool> ExistsAsync(int idEstudiante, int idCurso, int idGrupo, int idPeriodo)
+        public async Task<bool> ExisteDuplicadoAsync(int idEstudiante, int idCurso, int idGrupo, int? excluirId = null)
         {
-            using var conn = await _factory.CreateConnectionAsync();
+            using var connection = await _factory.CreateConnectionAsync();
 
             var sql = @"
-                SELECT COUNT(1)
-                FROM Matricula
-                WHERE ID_Estudiante = @idEstudiante
-                  AND ID_Curso      = @idCurso
-                  AND ID_Grupo      = @idGrupo
-                  AND ID_Periodo    = @idPeriodo;";
+        SELECT COUNT(*) 
+        FROM Matricula
+        WHERE ID_Estudiante = @idEstudiante
+          AND ID_Curso      = @idCurso
+          AND ID_Grupo      = @idGrupo
+          AND (@excluirId IS NULL OR ID_Matricula <> @excluirId);";
 
-            var count = await conn.ExecuteScalarAsync<int>(sql, new
+            var count = await connection.ExecuteScalarAsync<int>(sql, new
             {
                 idEstudiante,
                 idCurso,
                 idGrupo,
-                idPeriodo
+                excluirId
             });
 
             return count > 0;
