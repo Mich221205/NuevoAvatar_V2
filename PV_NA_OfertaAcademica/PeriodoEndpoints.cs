@@ -12,9 +12,8 @@ namespace PV_NA_OfertaAcademica.Controllers
             var group = app.MapGroup("/periodo")
                            .WithOpenApi()
                            .WithTags("Periodo");
-            //.RequireAuthorization(); // 🔒 Token validado con USR5
+            //.RequireAuthorization(); 
 
-            
             group.MapGet("/", async (PeriodoService service, HttpContext ctx) =>
             {
                 var idUsuario = ctx.User.FindFirst("usuarioID")?.Value ?? "0";
@@ -24,7 +23,6 @@ namespace PV_NA_OfertaAcademica.Controllers
             .WithSummary("Obtiene todos los periodos")
             .WithDescription("Retorna la lista completa de periodos registrados.");
 
-            
             group.MapGet("/{id:int}", async (int id, PeriodoService service, HttpContext ctx) =>
             {
                 if (id <= 0)
@@ -39,22 +37,27 @@ namespace PV_NA_OfertaAcademica.Controllers
             })
             .WithSummary("Obtiene un periodo por su ID.");
 
-            
             group.MapPost("/", async (PeriodoCreateDto dto, PeriodoService service, HttpContext ctx) =>
             {
                 var errores = ValidarPeriodo(dto.Anio, dto.Numero_Periodo, dto.Fecha_Inicio, dto.Fecha_Fin);
                 if (errores.Any())
                     return Results.BadRequest(new { Mensaje = "Datos inválidos", Errores = errores });
 
-                var idUsuario = ctx.User.FindFirst("usuarioID")?.Value ?? "0";
-                await service.CrearAsync(dto, idUsuario);
+                try
+                {
+                    var idUsuario = ctx.User.FindFirst("usuarioID")?.Value ?? "0";
+                    await service.CrearAsync(dto, idUsuario);
 
-                return Results.Created($"/periodo/{dto.Anio}-{dto.Numero_Periodo}", dto);
+                    return Results.Created($"/periodo/{dto.Anio}-{dto.Numero_Periodo}", dto);
+                }
+                catch (Exception ex)
+                {
+                    return Results.BadRequest(new { Error = ex.Message });
+                }
             })
             .WithSummary("Crea un nuevo periodo")
             .WithDescription("Registra un nuevo periodo en la base de datos y genera una bitácora.");
 
-            
             group.MapPut("/{id:int}", async (int id, PeriodoUpdateDto dto, PeriodoService service, HttpContext ctx) =>
             {
                 if (id <= 0)
@@ -70,14 +73,20 @@ namespace PV_NA_OfertaAcademica.Controllers
                 if (existente is null)
                     return Results.NotFound("No existe un periodo con ese ID.");
 
-                var idUsuario = ctx.User.FindFirst("usuarioID")?.Value ?? "0";
-                await service.ModificarAsync(dto, idUsuario);
+                try
+                {
+                    var idUsuario = ctx.User.FindFirst("usuarioID")?.Value ?? "0";
+                    await service.ModificarAsync(dto, idUsuario);
 
-                return Results.Ok("Periodo actualizado correctamente.");
+                    return Results.Ok("Periodo actualizado correctamente.");
+                }
+                catch (Exception ex)
+                {
+                    return Results.BadRequest(new { Error = ex.Message });
+                }
             })
             .WithSummary("Modifica un periodo existente.");
 
-            
             group.MapDelete("/{id:int}", async (int id, PeriodoService service, HttpContext ctx) =>
             {
                 if (id <= 0)
@@ -87,10 +96,17 @@ namespace PV_NA_OfertaAcademica.Controllers
                 if (existente is null)
                     return Results.NotFound("No existe un periodo con ese ID.");
 
-                var idUsuario = ctx.User.FindFirst("usuarioID")?.Value ?? "0";
-                await service.EliminarAsync(id, idUsuario);
+                try
+                {
+                    var idUsuario = ctx.User.FindFirst("usuarioID")?.Value ?? "0";
+                    await service.EliminarAsync(id, idUsuario);
 
-                return Results.Ok($"Periodo con ID {id} eliminado correctamente.");
+                    return Results.Ok($"Periodo con ID {id} eliminado correctamente.");
+                }
+                catch (Exception ex)
+                {
+                    return Results.BadRequest(new { Error = ex.Message });
+                }
             })
             .WithSummary("Elimina un periodo existente.");
         }
