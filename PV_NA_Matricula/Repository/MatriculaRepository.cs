@@ -1,6 +1,7 @@
 ﻿using System.Data;
 using Dapper;
 using Microsoft.AspNetCore.Connections;
+using PV_NA_Matricula.Dtos;
 using PV_NA_Matricula.Entities;
 
 namespace PV_NA_Matricula.Repository
@@ -95,6 +96,45 @@ namespace PV_NA_Matricula.Repository
             });
 
             return count > 0;
+        }
+
+        public async Task<IEnumerable<Adm19ListadoRowDto>> ListadoAdm19Async(
+             int? idPeriodo,
+             int? idCarrera, 
+             int? idCurso,
+             int? idGrupo)
+        {
+            using var conn = await _factory.CreateConnectionAsync();
+
+            var sql = @"
+        SELECT
+            m.ID_Matricula,
+            e.ID_Estudiante,
+            e.Tipo_Identificacion,
+            e.Identificacion,
+            e.Nombre,
+
+            -- En esta BD solo tenemos IDs, no nombres
+            m.ID_Curso,
+            m.ID_Grupo,
+            m.ID_Periodo
+
+            -- Estos campos quedan con valores por defecto (0 / vacío)
+            -- y se pueden completar desde Oferta en otro paso
+        FROM Matricula m
+        INNER JOIN Estudiante e ON e.ID_Estudiante = m.ID_Estudiante
+        WHERE (@idPeriodo IS NULL OR m.ID_Periodo = @idPeriodo)
+          AND (@idCurso   IS NULL OR m.ID_Curso   = @idCurso)
+          AND (@idGrupo   IS NULL OR m.ID_Grupo   = @idGrupo)
+        ORDER BY m.ID_Matricula;";
+
+            return await conn.QueryAsync<Adm19ListadoRowDto>(sql, new
+            {
+                idPeriodo,
+                idCarrera,
+                idCurso,
+                idGrupo
+            });
         }
     }
 }

@@ -1,7 +1,9 @@
 ﻿using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Http;
+using PV_NA_Matricula.Dtos;
 using PV_NA_Matricula.Entities;
 using PV_NA_Matricula.Repository;
 
@@ -208,6 +210,84 @@ namespace PV_NA_Matricula.Services
             var ahora = DateTime.Now;
             if (!(periodo.Fecha_Inicio > ahora))
                 throw new Exception("Solo se pueden matricular periodos ACTIVOS (fecha de inicio posterior a la actual).");
+        }
+        public async Task<(IEnumerable<Adm19ListadoRowDto> datos, int total)> ListadoAdm19Async(
+    int? idPeriodo,
+    int? idCarrera, 
+    int? idCurso,
+    int? idGrupo,
+    int page,
+    int size,
+    string? sort,
+    bool asc,
+    int idUsuario)
+        {
+            if (page <= 0) page = 1;
+            if (size <= 0) size = 10;
+
+            var lista = await _repo.ListadoAdm19Async(idPeriodo, idCarrera, idCurso, idGrupo);
+            var enumerable = lista.AsEnumerable();
+
+            enumerable = (sort ?? "").ToLower() switch
+            {
+                "nombre" => asc ? enumerable.OrderBy(x => x.Nombre) : enumerable.OrderByDescending(x => x.Nombre),
+                "identificacion" => asc ? enumerable.OrderBy(x => x.Identificacion) : enumerable.OrderByDescending(x => x.Identificacion),
+                "curso" => asc ? enumerable.OrderBy(x => x.ID_Curso) : enumerable.OrderByDescending(x => x.ID_Curso),
+                "grupo" => asc ? enumerable.OrderBy(x => x.ID_Grupo) : enumerable.OrderByDescending(x => x.ID_Grupo),
+                "carrera" => asc ? enumerable.OrderBy(x => x.ID_Carrera) : enumerable.OrderByDescending(x => x.ID_Carrera),
+                _ => asc ? enumerable.OrderBy(x => x.ID_Matricula) : enumerable.OrderByDescending(x => x.ID_Matricula)
+            };
+
+            var total = enumerable.Count();
+
+            var pageData = enumerable
+                .Skip((page - 1) * size)
+                .Take(size)
+                .ToList();
+
+            await RegistrarBitacoraAsync(
+                idUsuario,
+                $"Consultó listado ADM19 (período={idPeriodo}, carrera={idCarrera}, curso={idCurso}, grupo={idGrupo}, page={page}, size={size})",
+                new { idPeriodo, idCarrera, idCurso, idGrupo, total });
+
+            return (pageData, total);
+        }
+
+        public async Task<byte[]> ExportListadoAdm19CsvAsync(
+            int? idPeriodo,
+            int? idCarrera,
+            int? idCurso,
+            int? idGrupo,
+            string? sort,
+            bool asc,
+            int idUsuario)
+        {
+            var (datos, total) = await ListadoAdm19Async(
+                idPeriodo, idCarrera, idCurso, idGrupo,
+                page: 1,
+                size: int.MaxValue,
+                sort: sort,
+                asc: asc,
+                idUsuario: idUsuario);
+
+            var sb = new StringBuilder();
+
+            sb.AppendLine("ID_Matricula;ID_Estudiante;Tipo_Identificacion;Identificacion;Nombre;ID_Curso;ID_Grupo;ID_Periodo");
+
+            foreach (var r in datos)
+            {
+                sb.AppendLine(
+                    $"{r.ID_Matricula};{r.ID_Estudiante};{r.Tipo_Identificacion};{r.Identificacion};{r.Nombre};{r.ID_Curso};{r.ID_Grupo};{r.ID_Periodo}");
+            }
+
+            var bytes = Encoding.UTF8.GetBytes(sb.ToString());
+
+            await RegistrarBitacoraAsync(
+                idUsuario,
+                "Exportó listado ADM19 en CSV",
+                new { idPeriodo, idCarrera, idCurso, idGrupo, total });
+
+            return bytes;
         }
     }
 }

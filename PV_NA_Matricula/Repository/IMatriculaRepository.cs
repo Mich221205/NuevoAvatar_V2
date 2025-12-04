@@ -1,4 +1,5 @@
-﻿using PV_NA_Matricula.Entities;
+﻿using PV_NA_Matricula.Dtos;
+using PV_NA_Matricula.Entities;
 
 namespace PV_NA_Matricula.Repository
 {
@@ -10,6 +11,12 @@ namespace PV_NA_Matricula.Repository
 		Task<IEnumerable<object>> GetEstudiantesPorCursoYGrupoAsync(int idCurso, int idGrupo);
 		Task<Matricula?> GetByIdAsync(int id);
 		Task<bool> ExisteDuplicadoAsync(int idEstudiante, int idCurso, int idGrupo, int? excluirId = null);
+
+        Task<IEnumerable<Adm19ListadoRowDto>> ListadoAdm19Async(
+            int? idPeriodo,
+            int? idCarrera,
+            int? idCurso,
+            int? idGrupo);
     }
 }
  

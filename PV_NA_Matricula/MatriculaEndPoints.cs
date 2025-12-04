@@ -84,6 +84,69 @@ namespace PV_NA_Matricula
                     : Results.NotFound(new { message = "No hay estudiantes matriculados en ese curso y grupo." });
             })
             .WithSummary("Obtiene los estudiantes matriculados según curso y grupo y registra la acción en bitácora.");
+
+            app.MapGet("/matricula/adm19", async (
+                int? idPeriodo,
+                int? idCarrera,
+                int? idCurso,
+                int? idGrupo,
+                int idUsuario,
+                IMatriculaService service) =>
+                {
+                var (datos, total) = await service.ListadoAdm19Async(
+                    idPeriodo,
+                    idCarrera,
+                    idCurso,
+                    idGrupo,
+                    page: 1,       
+                    size: 1000,     
+                    sort: "id",     
+                    asc: true,
+                    idUsuario
+                );
+
+                return Results.Ok(datos);
+            })
+            .WithSummary("Obtiene el listado de matrículas (ADM19) para el frontend actual.");
+
+
+            app.MapGet("/matricula/adm19-listado", async (
+                int? idPeriodo,
+                int? idCarrera,
+                int? idCurso,
+                int? idGrupo,
+                int page,
+                int size,
+                string? sort,
+                bool asc,
+                int idUsuario,
+                IMatriculaService service) =>
+            {
+                var (datos, total) = await service.ListadoAdm19Async(
+                    idPeriodo, idCarrera, idCurso, idGrupo,
+                    page, size, sort, asc, idUsuario);
+
+                return Results.Ok(new { datos, total });
+            })
+            .WithSummary("Obtiene el listado paginado de matrículas (ADM19) con filtros por período/carrera/curso/grupo.");
+
+            app.MapGet("/matricula/adm19-export-csv", async (
+                int? idPeriodo,
+                int? idCarrera,
+                int? idCurso,
+                int? idGrupo,
+                string? sort,
+                bool asc,
+                int idUsuario,
+                IMatriculaService service) =>
+            {
+                var bytes = await service.ExportListadoAdm19CsvAsync(
+                    idPeriodo, idCarrera, idCurso, idGrupo,
+                    sort, asc, idUsuario);
+
+                return Results.File(bytes, "text/csv", "ListadoMatriculas.csv");
+            })
+            .WithSummary("Exporta el listado de matrículas (ADM19) en formato CSV.");
         }
     }
 }
