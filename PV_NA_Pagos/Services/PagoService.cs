@@ -50,7 +50,7 @@ namespace PV_NA_Pagos.Services
 
             int idPago = await _repository.CrearAsync(pago);
 
-            await _facturaRepository.ReversarAsync(idFactura);
+            await _facturaRepository.MarcarComoPagadaAsync(idFactura);
 
             await RegistrarBitacoraAsync(idUsuario, $"El usuario {idUsuario} registró el pago {idPago} para la factura {idFactura} por ₡{monto}.");
 

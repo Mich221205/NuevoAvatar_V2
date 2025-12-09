@@ -4,19 +4,37 @@ using PV_NA_Pagos;
 using PV_NA_Pagos.Repository;
 using PV_NA_Pagos.Services;
 using System.Data;
+using System.Net.Http.Headers;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// ================================
+// HTTP CLIENTS EXTERNOS
+// ================================
+
+var bitacoraBaseUrl = builder.Configuration["BitacoraApi:BaseUrl"]
+                      ?? "http://localhost:5062";  
+
+var authBaseUrl = builder.Configuration["AuthApi:BaseUrl"]
+                  ?? "http://localhost:5189";       
+
 builder.Services.AddHttpClient("BitacoraClient", client =>
 {
-    client.BaseAddress = new Uri("http://localhost:5210");
+    client.BaseAddress = new Uri(bitacoraBaseUrl);
+    client.DefaultRequestHeaders.Accept.Add(
+        new MediaTypeWithQualityHeaderValue("application/json"));
 });
 
 builder.Services.AddHttpClient("AuthClient", client =>
 {
-    client.BaseAddress = new Uri("http://localhost:5233");
+    client.BaseAddress = new Uri(authBaseUrl);
+    client.DefaultRequestHeaders.Accept.Add(
+        new MediaTypeWithQualityHeaderValue("application/json"));
 });
 
+// ================================
+// SWAGGER
+// ================================
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -52,17 +70,25 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
+// ================================
+// DI / REPOS / SERVICES
+// ================================
 builder.Services.AddScoped<IDbConnection>(sp =>
     new SqlConnection(builder.Configuration.GetConnectionString("DefaultConnection")));
+
 builder.Services.AddScoped<FacturaRepository>();
 builder.Services.AddScoped<FacturaService>();
 builder.Services.AddScoped<PagoRepository>();
 builder.Services.AddScoped<PagoService>();
 
+// HttpClient genérico (para IHttpClientFactory)
 builder.Services.AddHttpClient();
 
 var app = builder.Build();
 
+// ================================
+// MIDDLEWARE DE AUTENTICACIÓN POR TOKEN
+// ================================
 app.Use(async (context, next) =>
 {
     if (context.Request.Path.StartsWithSegments("/swagger") ||
@@ -81,7 +107,10 @@ app.Use(async (context, next) =>
         return;
     }
 
-    var authClient = context.RequestServices.GetRequiredService<IHttpClientFactory>().CreateClient("AuthClient");
+    var authClient = context.RequestServices
+        .GetRequiredService<IHttpClientFactory>()
+        .CreateClient("AuthClient");
+
     var response = await authClient.GetAsync($"/login/validate?token={token}");
 
     if (!response.IsSuccessStatusCode)
@@ -94,6 +123,9 @@ app.Use(async (context, next) =>
     await next();
 });
 
+// ================================
+// SWAGGER
+// ================================
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -103,6 +135,9 @@ if (app.Environment.IsDevelopment())
     });
 }
 
+// ================================
+// ENDPOINTS
+// ================================
 app.MapFacturaEndpoints();
 app.MapPagoEndpoints();
 
