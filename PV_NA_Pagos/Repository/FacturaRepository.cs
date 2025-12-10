@@ -88,5 +88,16 @@ namespace PV_NA_Pagos.Repository
             int rows = await _connection.ExecuteAsync(sql, new { id });
             return rows > 0;
         }
+
+        public async Task<int> CountPendientesAsync(int idEstudiante)
+        {
+            const string sql = @"
+                SELECT COUNT(*)
+                FROM Factura
+                WHERE ID_Estudiante = @idEstudiante
+                  AND Estado = 'Pendiente'";
+
+            return await _connection.ExecuteScalarAsync<int>(sql, new { idEstudiante });
+        }
     }
 }

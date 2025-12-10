@@ -1,9 +1,9 @@
-﻿using Microsoft.Data.SqlClient;
+﻿using System.Data;
+using Microsoft.Data.SqlClient;
 using Microsoft.OpenApi.Models;
 using PV_NA_Matricula;
 using PV_NA_Matricula.Repository;
 using PV_NA_Matricula.Services;
-using System.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -25,23 +25,40 @@ builder.Services.AddHttpClient("OfertaClient", client =>
     client.BaseAddress = new Uri("http://localhost:5048");
 });
 
+builder.Services.AddHttpClient("PagosClient", client =>
+{
+    client.BaseAddress = new Uri("http://localhost:5034");
+});
+
 // ======================================================
 // 🔹 Repositorios y Servicios
 // ======================================================
 builder.Services.AddSingleton<IDbConnectionFactory, DbConnectionFactory>();
+
+// Interfaces
 builder.Services.AddScoped<IMatriculaRepository, MatriculaRepository>();
-builder.Services.AddScoped<IMatriculaService, MatriculaService>();
 builder.Services.AddScoped<IPreMatriculaRepository, PreMatriculaRepository>();
-builder.Services.AddScoped<IPreMatriculaService, PreMatriculaService>();
 builder.Services.AddScoped<IEstudianteRepository, EstudianteRepository>();
-builder.Services.AddScoped<IEstudianteService, EstudianteService>();
 builder.Services.AddScoped<IDireccionRepository, DireccionRepository>();
-builder.Services.AddScoped<IDireccionService, DireccionService>();
 builder.Services.AddScoped<INotasRepository, NotasRepository>();
+
+// Clases concretas (NECESARIAS PARA MOBILE)
+builder.Services.AddScoped<MatriculaRepository>();
+builder.Services.AddScoped<PreMatriculaRepository>();
+builder.Services.AddScoped<EstudianteRepository>();
+builder.Services.AddScoped<DireccionRepository>();
+builder.Services.AddScoped<NotasRepository>();
+
+// Servicios
+builder.Services.AddScoped<IMatriculaService, MatriculaService>();
+builder.Services.AddScoped<IPreMatriculaService, PreMatriculaService>();
+builder.Services.AddScoped<IEstudianteService, EstudianteService>();
+builder.Services.AddScoped<IDireccionService, DireccionService>();
 builder.Services.AddScoped<INotasService, NotasService>();
 
-builder.Services.AddHttpClient();
+builder.Services.AddScoped<PagosService>();
 
+builder.Services.AddHttpClient();
 builder.Services.AddHttpContextAccessor();
 
 // ======================================================
@@ -93,7 +110,8 @@ var app = builder.Build();
 app.Use(async (context, next) =>
 {
     if (context.Request.Path.StartsWithSegments("/swagger") ||
-        context.Request.Path.StartsWithSegments("/validate"))
+        context.Request.Path.StartsWithSegments("/validate") ||
+        context.Request.Path.StartsWithSegments("/mobile"))
     {
         await next();
         return;
@@ -141,8 +159,10 @@ app.MapMatriculaEndpoints();
 app.MapEstudianteEndpoints();
 app.MapDireccionEndpoints();
 app.MapNotasEndpoints();
+app.MapMobileEndPoints();
 
 // ======================================================
 // 🔹 Run
 // ======================================================
 app.Run();
+

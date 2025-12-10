@@ -11,12 +11,11 @@ var builder = WebApplication.CreateBuilder(args);
 // ================================
 // HTTP CLIENTS EXTERNOS
 // ================================
-
 var bitacoraBaseUrl = builder.Configuration["BitacoraApi:BaseUrl"]
-                      ?? "http://localhost:5062";  
+                      ?? "http://localhost:5062";
 
 var authBaseUrl = builder.Configuration["AuthApi:BaseUrl"]
-                  ?? "http://localhost:5189";       
+                  ?? "http://localhost:5189";
 
 builder.Services.AddHttpClient("BitacoraClient", client =>
 {
@@ -81,7 +80,6 @@ builder.Services.AddScoped<FacturaService>();
 builder.Services.AddScoped<PagoRepository>();
 builder.Services.AddScoped<PagoService>();
 
-// HttpClient genérico (para IHttpClientFactory)
 builder.Services.AddHttpClient();
 
 var app = builder.Build();
@@ -92,7 +90,8 @@ var app = builder.Build();
 app.Use(async (context, next) =>
 {
     if (context.Request.Path.StartsWithSegments("/swagger") ||
-        context.Request.Path.StartsWithSegments("/validate"))
+        context.Request.Path.StartsWithSegments("/validate") ||
+        context.Request.Path.StartsWithSegments("/Factura/listar"))
     {
         await next();
         return;
@@ -142,3 +141,4 @@ app.MapFacturaEndpoints();
 app.MapPagoEndpoints();
 
 app.Run();
+

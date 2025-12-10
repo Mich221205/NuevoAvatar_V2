@@ -136,6 +136,32 @@ namespace PV_NA_Matricula.Repository
                 idGrupo
             });
         }
+
+        public async Task<int> CountCursosActualesAsync(int idEstudiante)
+        {
+            using var conn = await _factory.CreateConnectionAsync();
+
+            var sql = @"
+                SELECT COUNT(*)
+                FROM Matricula
+                WHERE ID_Estudiante = @idEstudiante
+                  AND ID_Periodo = 4;";
+
+            return await conn.ExecuteScalarAsync<int>(sql, new { idEstudiante });
+        }
+
+        public async Task<int> CountPeriodoActualAsync(int idEstudiante)
+        {
+            using var conn = await _factory.CreateConnectionAsync();
+
+            var sql = @"
+                SELECT COUNT(*)
+                FROM Matricula
+                WHERE ID_Estudiante = @idEstudiante
+                  AND ID_Periodo = 4;";
+
+            return await conn.ExecuteScalarAsync<int>(sql, new { idEstudiante });
+        }
     }
 }
 

@@ -82,6 +82,19 @@ namespace PV_NA_Matricula.Repository
 
             return count > 0;
         }
+
+        public async Task<int> CountActivasAsync(int idEstudiante)
+        {
+            using var connection = await _connectionFactory.CreateConnectionAsync();
+
+            var sql = @"
+                SELECT COUNT(*)
+                FROM PreMatricula
+                WHERE ID_Estudiante = @idEstudiante
+                  AND ID_Periodo > 4;";
+
+            return await connection.ExecuteScalarAsync<int>(sql, new { idEstudiante });
+        }
     }
 }
 
