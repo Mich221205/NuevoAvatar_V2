@@ -160,6 +160,7 @@ app.MapEstudianteEndpoints();
 app.MapDireccionEndpoints();
 app.MapNotasEndpoints();
 app.MapMobileEndPoints();
+app.MapMobileExpedienteEndpoints();
 
 // ======================================================
 // 🔹 Run

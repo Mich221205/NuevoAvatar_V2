@@ -109,5 +109,32 @@ namespace PV_NA_Matricula.Services
                 Console.WriteLine($" Error al registrar bitácora: {ex.Message}");
             }
         }
+
+        public async Task<IEnumerable<Canton>> GetCantonesTodosAsync(int idUsuario)
+        {
+            var cantones = await _repo.GetCantonesTodosAsync();
+
+            await RegistrarBitacoraAsync(
+                idUsuario,
+                $"El usuario {idUsuario} consultó TODOS los cantones.",
+                new { total = cantones.Count(), resultado = cantones }
+            );
+
+            return cantones;
+        }
+
+
+        public async Task<IEnumerable<Distrito>> GetDistritosTodosAsync(int idUsuario)
+        {
+            var distritos = await _repo.GetDistritosTodosAsync();
+
+            await RegistrarBitacoraAsync(
+                idUsuario,
+                $"El usuario {idUsuario} consultó TODOS los distritos.",
+                new { total = distritos.Count(), resultado = distritos }
+            );
+
+            return distritos;
+        }
     }
 }

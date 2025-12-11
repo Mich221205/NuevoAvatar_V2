@@ -7,5 +7,7 @@ namespace PV_NA_Matricula.Services
         Task<IEnumerable<Provincia>> GetProvinciasAsync(int idUsuario);
         Task<IEnumerable<Canton>> GetCantonesPorProvinciaAsync(int idProvincia, int idUsuario);
         Task<IEnumerable<Distrito>> GetDistritosAsync(int idProvincia, int idCanton, int idUsuario);
+        Task<IEnumerable<Canton>> GetCantonesTodosAsync(int idUsuario);
+        Task<IEnumerable<Distrito>> GetDistritosTodosAsync(int idUsuario);
     }
 }

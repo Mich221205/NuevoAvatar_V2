@@ -36,5 +36,17 @@ namespace PV_NA_Matricula.Repository
                   WHERE ID_Provincia = @idProvincia AND ID_Canton = @idCanton",
 				new { idProvincia, idCanton });
 		}
-	}
+
+        public async Task<IEnumerable<Canton>> GetCantonesTodosAsync()
+        {
+            using var conn = await _factory.CreateConnectionAsync();
+            return await conn.QueryAsync<Canton>("SELECT ID_Canton, Nombre FROM Canton");
+        }
+
+        public async Task<IEnumerable<Distrito>> GetDistritosTodosAsync()
+        {
+            using var conn = await _factory.CreateConnectionAsync();
+            return await conn.QueryAsync<Distrito>("SELECT ID_Distrito, Nombre FROM Distrito");
+        }
+    }
 }

@@ -8,4 +8,5 @@ public interface IEstudianteService
     Task<int> UpdateAsync(Estudiante e, int idUsuario);
     Task<int> DeleteAsync(int id, int idUsuario);
     Task<int> DeleteAsync(int id, int idUsuario, object? body);
+    Task UpdateTelefonoDireccionAsync(int id, string telefono, string direccion, int idUsuario);
 }

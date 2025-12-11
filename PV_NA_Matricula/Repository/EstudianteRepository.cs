@@ -52,6 +52,25 @@ namespace PV_NA_Matricula.Repository
 			using var conn = await _factory.CreateConnectionAsync();
 			return await conn.ExecuteAsync("DELETE FROM Estudiante WHERE ID_Estudiante=@id", new { id });
 		}
-	}
+
+        public async Task<int> UpdateTelefonoDireccionAsync(int idEstudiante, string telefono, string direccion)
+        {
+            using var conn = await _factory.CreateConnectionAsync();
+
+            var sql = @"
+        UPDATE Estudiante
+        SET Telefono = @telefono,
+            Direccion = @direccion
+        WHERE ID_Estudiante = @idEstudiante;
+    ";
+
+            return await conn.ExecuteAsync(sql, new
+            {
+                idEstudiante,
+                telefono,
+                direccion
+            });
+        }
+    }
 }
 

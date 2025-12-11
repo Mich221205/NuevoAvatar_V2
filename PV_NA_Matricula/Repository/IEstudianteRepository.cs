@@ -9,6 +9,7 @@ namespace PV_NA_Matricula.Repository
 		Task<int> InsertAsync(Estudiante e);
 		Task<int> UpdateAsync(Estudiante e);
 		Task<int> DeleteAsync(int id);
-	}
+        Task<int> UpdateTelefonoDireccionAsync(int idEstudiante, string telefono, string direccion);
+    }
 }
  

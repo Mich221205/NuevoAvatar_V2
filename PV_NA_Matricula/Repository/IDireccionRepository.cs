@@ -7,6 +7,8 @@ namespace PV_NA_Matricula.Repository
 		Task<IEnumerable<Provincia>> GetProvinciasAsync();
 		Task<IEnumerable<Canton>> GetCantonesPorProvinciaAsync(int idProvincia);
 		Task<IEnumerable<Distrito>> GetDistritosAsync(int idProvincia, int idCanton);
-	}
+        Task<IEnumerable<Canton>> GetCantonesTodosAsync();
+        Task<IEnumerable<Distrito>> GetDistritosTodosAsync();
+    }
 }
  

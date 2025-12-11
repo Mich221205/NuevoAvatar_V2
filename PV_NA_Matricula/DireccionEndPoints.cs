@@ -39,6 +39,21 @@ namespace PV_NA_Matricula
                     : Results.NotFound(new { message = "No se encontraron distritos para los parámetros indicados." });
             })
             .WithSummary("Obtiene los distritos según provincia y cantón y registra la acción en bitácora.");
+
+            app.MapGet("/direccion/cantones-todos", async (int idUsuario, IDireccionService service) =>
+            {
+                var cantones = await service.GetCantonesTodosAsync(idUsuario);
+                return Results.Ok(cantones);
+            })
+            .WithSummary("Lista TODOS los cantones sin filtrar.");
+
+
+            app.MapGet("/direccion/distritos-todos", async (int idUsuario, IDireccionService service) =>
+            {
+                var distritos = await service.GetDistritosTodosAsync(idUsuario);
+                return Results.Ok(distritos);
+            })
+            .WithSummary("Lista TODOS los distritos sin filtrar.");
         }
     }
 }
