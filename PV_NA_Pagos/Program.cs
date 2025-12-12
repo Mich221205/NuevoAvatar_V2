@@ -122,17 +122,25 @@ app.Use(async (context, next) =>
     await next();
 });
 
+
 // ================================
 // SWAGGER
 // ================================
-if (app.Environment.IsDevelopment())
+
+app.UseSwagger();
+app.UseSwaggerUI(options =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(options =>
-    {
-        options.SwaggerEndpoint("/swagger/v1/swagger.json", "API Factura - IPN1 v1");
-    });
-}
+    options.SwaggerEndpoint("/swagger/v1/swagger.json", "API Factura - IPN1 v1");
+});
+
+//if (app.Environment.IsDevelopment())
+//{
+//    app.UseSwagger();
+//    app.UseSwaggerUI(options =>
+//    {
+//        options.SwaggerEndpoint("/swagger/v1/swagger.json", "API Factura - IPN1 v1");
+//    });
+//}
 
 // ================================
 // ENDPOINTS

@@ -42,7 +42,7 @@ builder.Services.AddScoped<IEstudianteRepository, EstudianteRepository>();
 builder.Services.AddScoped<IDireccionRepository, DireccionRepository>();
 builder.Services.AddScoped<INotasRepository, NotasRepository>();
 
-// Clases concretas (NECESARIAS PARA MOBILE)
+// Clases concretas
 builder.Services.AddScoped<MatriculaRepository>();
 builder.Services.AddScoped<PreMatriculaRepository>();
 builder.Services.AddScoped<EstudianteRepository>();
@@ -161,6 +161,7 @@ app.MapDireccionEndpoints();
 app.MapNotasEndpoints();
 app.MapMobileEndPoints();
 app.MapMobileExpedienteEndpoints();
+app.MapMobileDireccionEndpoints();
 
 // ======================================================
 // 🔹 Run

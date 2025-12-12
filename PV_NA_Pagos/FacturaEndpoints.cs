@@ -1,4 +1,5 @@
-﻿using PV_NA_Pagos.Dtos;
+﻿using Microsoft.AspNetCore.OpenApi;
+using PV_NA_Pagos.Dtos;
 using PV_NA_Pagos.Services;
 
 namespace PV_NA_Pagos
@@ -7,6 +8,7 @@ namespace PV_NA_Pagos
     {
         public static void MapFacturaEndpoints(this WebApplication app)
         {
+            // CREAR FACTURA
             app.MapPost("/factura", async (
                 int idEstudiante,
                 int idMatricula,
@@ -22,15 +24,21 @@ namespace PV_NA_Pagos
 
                 return Results.Created($"/factura/{factura?.ID_Factura}", factura);
             })
-            .WithSummary("Crea una factura nueva para un estudiante / matrícula / período.");
+            .WithSummary("Crea una factura nueva para un estudiante / matrícula / período.")
+            .WithTags("Factura")
+            .WithOpenApi();
 
+            // OBTENER FACTURA POR ID
             app.MapGet("/factura/{id:int}", async (int id, FacturaService service) =>
             {
                 var factura = await service.ObtenerPorIdAsync(id);
                 return factura is not null ? Results.Ok(factura) : Results.NotFound();
             })
-            .WithSummary("Obtiene una factura por su ID.");
+            .WithSummary("Obtiene una factura por su ID.")
+            .WithTags("Factura")
+            .WithOpenApi();
 
+            // LISTAR FACTURAS
             app.MapGet("/factura", async (
                 int? idPeriodo,
                 int? idEstudiante,
@@ -40,8 +48,11 @@ namespace PV_NA_Pagos
                 var facturas = await service.ListarAsync(idPeriodo, idEstudiante, estado);
                 return Results.Ok(facturas);
             })
-            .WithSummary("Obtiene facturas filtradas por período, estudiante y estado.");
+            .WithSummary("Obtiene facturas filtradas por período, estudiante y estado.")
+            .WithTags("Factura")
+            .WithOpenApi();
 
+            // REVERSAR FACTURA
             app.MapPost("/factura/{id:int}/reversar", async (
                 int id,
                 int idUsuario,
@@ -54,8 +65,9 @@ namespace PV_NA_Pagos
                     ? Results.Ok(new { message = "Factura anulada correctamente." })
                     : Results.NotFound(new { message = "Factura no encontrada o no se pudo anular." });
             })
-            .WithSummary("Reversa (anula) una factura existente.");
+            .WithSummary("Reversa (anula) una factura existente.")
+            .WithTags("Factura")
+            .WithOpenApi();
         }
     }
 }
-
